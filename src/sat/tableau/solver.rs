@@ -40,7 +40,7 @@ pub struct Solver {
     unsat_core_extraction: bool,
 
     boolean_solver: BooleanSolver,
-    real_solver: Option<RealSolver>,
+    real_solver: RealSolver,
 }
 
 impl Solver {
@@ -49,9 +49,9 @@ impl Solver {
         Solver {
             boolean_solver: BooleanSolver::new(unsat_core_extraction),
             real_solver: if mltl {
-                None
+                RealSolver::Empty
             } else {
-                Some(RealSolver::new(unsat_core_extraction))
+                RealSolver::Z3(Z3RealSolver::new(unsat_core_extraction))
             },
             unsat_core_extraction,
         }
@@ -59,26 +59,21 @@ impl Solver {
 
     #[must_use]
     pub fn empty_solver(&self) -> Self {
-        let mut solver = Solver::new(self.unsat_core_extraction, self.real_solver.is_none());
-        if let (Some(src), Some(dst)) = (self.real_solver.as_ref(), solver.real_solver.as_mut()) {
-            dst.z3_variables = src.z3_variables.clone();
-            dst.z3_ast_cache = src.z3_ast_cache.clone();
+        Solver {
+            boolean_solver: BooleanSolver::new(self.unsat_core_extraction),
+            real_solver: self.real_solver.empty_solver(),
+            unsat_core_extraction: self.unsat_core_extraction,
         }
-        solver
     }
 
     pub fn push(&mut self) {
         self.boolean_solver.push();
-        if let Some(real_solver) = self.real_solver.as_mut() {
-            real_solver.push();
-        }
+        self.real_solver.push();
     }
 
     pub fn pop(&mut self) {
         self.boolean_solver.pop();
-        if let Some(real_solver) = self.real_solver.as_mut() {
-            real_solver.pop();
-        }
+        self.real_solver.pop();
     }
 
     fn add_constraints(&mut self, node: &Node) {
@@ -105,7 +100,7 @@ impl Solver {
                     self.boolean_solver.add_constraint(ass.negated, var, ass.id);
                 }
                 ExprKind::Rel { left, right, op } => {
-                    self.real_solver.as_mut().unwrap().add_constraint(
+                    self.real_solver.add_constraint(
                         ass.negated,
                         op.clone(),
                         left.clone(),
@@ -141,7 +136,7 @@ impl Solver {
         }
         self.add_constraints(node);
         let bool_ok = self.boolean_solver.check();
-        let real_ok = self.real_solver.as_mut().is_none_or(RealSolver::check);
+        let real_ok = self.real_solver.check();
 
         bool_ok && real_ok
     }
@@ -151,9 +146,7 @@ impl Solver {
         if let Some(vec) = self.boolean_solver.unsat_core.clone() {
             return Some(vec);
         }
-        self.real_solver
-            .as_ref()
-            .and_then(|real_solver| real_solver.unsat_core.clone())
+        self.real_solver.extract_unsat_core()
     }
 }
 
@@ -248,7 +241,56 @@ impl BooleanSolver {
     }
 }
 
-struct RealSolver {
+enum RealSolver {
+    Empty,
+    Z3(Z3RealSolver),
+}
+
+impl RealSolver {
+    fn push(&mut self) {
+        match self {
+            RealSolver::Empty => {}
+            RealSolver::Z3(solver) => solver.push(),
+        }
+    }
+
+    fn pop(&mut self) {
+        match self {
+            RealSolver::Empty => {}
+            RealSolver::Z3(solver) => solver.pop(),
+        }
+    }
+
+    fn add_constraint(&mut self, negated: bool, op: RelOp, left: AExpr, right: AExpr, id: usize) {
+        match self {
+            RealSolver::Empty => panic!("Attempted to add real constraint to empty real solver"),
+            RealSolver::Z3(solver) => solver.add_constraint(negated, op, left, right, id),
+        }
+    }
+
+    fn check(&mut self) -> bool {
+        match self {
+            RealSolver::Empty => true,
+            RealSolver::Z3(solver) => solver.check(),
+        }
+    }
+
+    fn extract_unsat_core(&self) -> Option<Vec<usize>> {
+        match self {
+            RealSolver::Empty => None,
+            RealSolver::Z3(solver) => solver.extract_unsat_core(),
+        }
+    }
+
+    fn empty_solver(&self) -> Self {
+        match self {
+            RealSolver::Empty => RealSolver::Empty,
+            RealSolver::Z3(src) => RealSolver::Z3(src.empty_solver()),
+        }
+    }
+}
+
+struct Z3RealSolver {
     z3_solver: Z3Solver,
     z3_variables: BTreeMap<String, Real>,
     z3_ast_cache: HashMap<(bool, RelOp, AExpr, AExpr), Bool>,
@@ -259,9 +301,9 @@ struct RealSolver {
     unsat_core: Option<Vec<usize>>,
 }
 
-impl RealSolver {
+impl Z3RealSolver {
     fn new(unsat_core_extraction: bool) -> Self {
-        RealSolver {
+        Z3RealSolver {
             z3_solver: Z3Solver::new(),
             z3_variables: BTreeMap::new(),
             z3_ast_cache: HashMap::new(),
@@ -336,6 +378,17 @@ impl RealSolver {
             self.result_cache = Some(sat);
             sat
         }
+    }
+
+    fn extract_unsat_core(&self) -> Option<Vec<usize>> {
+        self.unsat_core.clone()
+    }
+
+    fn empty_solver(&self) -> Self {
+        let mut dst = Z3RealSolver::new(self.unsat_core_extraction);
+        dst.z3_variables = self.z3_variables.clone();
+        dst.z3_ast_cache = self.z3_ast_cache.clone();
+        dst
     }
 
     fn aexpr_to_z3(&mut self, expr: &AExpr) -> Real {

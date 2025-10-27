@@ -4,7 +4,10 @@ use num_rational::Ratio;
 
 use crate::{
     formula::{Expr, Formula, parser::parse_formula},
-    sat::tableau::{node::Node, solver::Solver},
+    sat::tableau::{
+        node::Node,
+        solver::{RealSolver, Solver},
+    },
 };
 
 fn parse_node(input: &str) -> Node {
@@ -117,17 +120,17 @@ fn mltl_boolean() {
 #[test]
 fn empty_solver_not_mltl() {
     let solver = Solver::new(false, false);
-    assert!(solver.real_solver.is_some());
+    assert!(matches!(solver.real_solver, RealSolver::Z3(_)));
     let empty_solver = solver.empty_solver();
-    assert!(empty_solver.real_solver.is_some());
+    assert!(matches!(empty_solver.real_solver, RealSolver::Z3(_)));
 }
 
 #[test]
 fn empty_solver_mltl() {
     let solver = Solver::new(false, true);
-    assert!(solver.real_solver.is_none());
+    assert!(matches!(solver.real_solver, RealSolver::Empty));
     let empty_solver = solver.empty_solver();
-    assert!(empty_solver.real_solver.is_none());
+    assert!(matches!(empty_solver.real_solver, RealSolver::Empty));
 }
 
 #[test]
