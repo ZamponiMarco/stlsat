@@ -7,10 +7,18 @@ default:
 release:
     cargo build --release
 
+[group('run')]
+[doc('Execute `cargo run` with provided arguments')]
 run *args:
     cargo run -- {{args}}
 
+[group('run')]
+[doc('Execute `cargo run --release` with provided arguments')]
+run-release *args:
+    cargo run --release -- {{args}}
+
 [group('test')]
+[doc('Run `cargo test` with provided arguments')]
 test *args:
     cargo test {{args}}
 
