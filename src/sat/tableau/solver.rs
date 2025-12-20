@@ -1,4 +1,5 @@
 use crate::formula::{AExpr, ExprKind, Formula, RelOp};
+use crate::sat::config::SolverStrategy;
 use crate::sat::tableau::node::Node;
 use crate::sat::tableau::solver::z3::Z3RealSolver;
 
@@ -42,16 +43,33 @@ pub struct Solver {
 
 impl Solver {
     #[must_use]
-    pub fn new(unsat_core_extraction: bool, mltl: bool) -> Self {
+    fn new(unsat_core_extraction: bool, real_solver: RealSolver) -> Self {
         Solver {
             boolean_solver: BooleanSolver::new(unsat_core_extraction),
-            real_solver: if mltl {
-                RealSolver::Empty
-            } else {
-                RealSolver::Z3(Z3RealSolver::new(unsat_core_extraction))
-            },
+            real_solver,
             unsat_core_extraction,
         }
+    }
+
+    #[must_use]
+    pub fn factory(
+        unsat_core_extraction: bool,
+        mltl: bool,
+        strategy: SolverStrategy,
+        _root: &Node,
+    ) -> Self {
+        Solver::new(
+            unsat_core_extraction,
+            match (mltl, strategy) {
+                (true, _) => RealSolver::Empty,
+                (false, SolverStrategy::Z3) => {
+                    RealSolver::Z3(Z3RealSolver::new(unsat_core_extraction))
+                }
+                (false, SolverStrategy::Auto) => {
+                    RealSolver::Z3(Z3RealSolver::new(unsat_core_extraction))
+                }
+            },
+        )
     }
 
     #[must_use]

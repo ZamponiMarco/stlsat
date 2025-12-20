@@ -140,9 +140,11 @@ impl Tableau {
     }
 
     fn solve_root(&mut self, root: Node) -> Option<bool> {
-        let mut solver = Solver::new(
+        let mut solver = Solver::factory(
             self.tableau_options.unsat_core_extraction,
             self.options.mltl,
+            self.options.solver,
+            &root,
         );
         solver.push();
 
