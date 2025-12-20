@@ -1,9 +1,30 @@
-use std::sync::Arc;
+use std::{fmt::Display, sync::Arc};
 
 use clap::Parser;
 use num_rational::Ratio;
 use rand::{Rng, seq::IndexedRandom, seq::SliceRandom};
 use stlsat::formula::{AExpr, ArithOp, Expr, ExprKind, Formula, Interval, RelOp, VariableName};
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Default, clap::ValueEnum)]
+pub enum ConstraintType {
+    Simple,
+    #[clap(name = "dl")]
+    DifferenceLogic,
+    Linear,
+    #[default]
+    All,
+}
+
+impl Display for ConstraintType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ConstraintType::Simple => write!(f, "simple"),
+            ConstraintType::DifferenceLogic => write!(f, "dl"),
+            ConstraintType::Linear => write!(f, "linear"),
+            ConstraintType::All => write!(f, "all"),
+        }
+    }
+}
 
 #[derive(Parser, Debug)]
 pub struct GeneratorArgs {
@@ -54,6 +75,10 @@ pub struct GeneratorArgs {
     /// Whether to enforce intervals starting at zero
     #[arg(long, default_value_t = false)]
     pub zero_interval_start: bool,
+
+    /// Which type to use for real constraints
+    #[arg(long, default_value_t = ConstraintType::All)]
+    pub constraint_type: ConstraintType,
 }
 
 pub struct RandomGenerator {
@@ -82,7 +107,7 @@ impl RandomGenerator {
         );
 
         let real_constraints: Vec<ExprKind> = (0..args.max_real_constraints)
-            .map(|_| random_rel(&real_vars))
+            .map(|_| random_rel(args.constraint_type, &real_vars))
             .collect();
         let bool_constraints = bool_vars
             .iter()
@@ -233,12 +258,19 @@ fn main() {
 }
 
 #[must_use]
-pub fn random_rel(real_vars: &[VariableName]) -> ExprKind {
+fn random_rel(constraint_type: ConstraintType, real_vars: &[VariableName]) -> ExprKind {
     let mut rng = rand::rng();
-    match rng.random_range(0..3) {
-        0 => random_simple(real_vars),
-        1 => random_diff_logic(real_vars),
-        _ => random_linear(real_vars),
+    match constraint_type {
+        ConstraintType::Simple => random_simple(real_vars),
+        ConstraintType::DifferenceLogic => match rng.random_range(0..2) {
+            0 => random_simple(real_vars),
+            _ => random_diff_logic(real_vars),
+        },
+        ConstraintType::Linear | ConstraintType::All => match rng.random_range(0..3) {
+            0 => random_simple(real_vars),
+            1 => random_diff_logic(real_vars),
+            _ => random_linear(real_vars),
+        },
     }
 }
 
