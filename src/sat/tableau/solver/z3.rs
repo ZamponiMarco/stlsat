@@ -91,6 +91,10 @@ impl Z3RealSolver {
             self.current_constraints
         );
 
+        if self.current_constraints.is_empty() {
+            return true;
+        }
+
         if let Some(res) = self.result_cache {
             tracing::Span::current().record("is_cached", true);
             res
