@@ -13,6 +13,7 @@ pub enum SolverStrategy {
     Auto,
     #[default]
     Z3,
+    DL,
 }
 
 impl Display for SolverStrategy {
@@ -20,6 +21,7 @@ impl Display for SolverStrategy {
         match self {
             SolverStrategy::Auto => write!(f, "auto"),
             SolverStrategy::Z3 => write!(f, "z3"),
+            SolverStrategy::DL => write!(f, "dl"),
         }
     }
 }

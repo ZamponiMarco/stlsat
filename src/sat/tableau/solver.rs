@@ -1,6 +1,7 @@
 use crate::formula::{AExpr, ExprKind, Formula, RelOp};
 use crate::sat::config::SolverStrategy;
 use crate::sat::tableau::node::Node;
+use crate::sat::tableau::solver::dl::DifferenceLogicSolver;
 use crate::sat::tableau::solver::z3::Z3RealSolver;
 
 use std::collections::HashMap;
@@ -10,6 +11,7 @@ use std::sync::Arc;
 #[cfg(test)]
 mod tests;
 
+mod dl;
 mod z3;
 
 #[derive(Clone, Debug)]
@@ -51,13 +53,13 @@ impl Solver {
         }
     }
 
-    #[tracing::instrument(level = "debug", skip(_root), fields(result = tracing::field::Empty))]
+    #[tracing::instrument(level = "debug", skip(root), fields(result = tracing::field::Empty))]
     #[must_use]
     pub fn factory(
         unsat_core_extraction: bool,
         mltl: bool,
         strategy: SolverStrategy,
-        _root: &Node,
+        root: &Node,
     ) -> Self {
         Solver::new(
             unsat_core_extraction,
@@ -70,9 +72,20 @@ impl Solver {
                     tracing::Span::current().record("result", "z3");
                     RealSolver::Z3(Z3RealSolver::new(unsat_core_extraction))
                 }
+                (false, SolverStrategy::DL) => {
+                    tracing::Span::current().record("result", "dl");
+                    RealSolver::DifferenceLogic(DifferenceLogicSolver::new(unsat_core_extraction))
+                }
                 (false, SolverStrategy::Auto) => {
-                    tracing::Span::current().record("result", "z3 (auto)");
-                    RealSolver::Z3(Z3RealSolver::new(unsat_core_extraction))
+                    if DifferenceLogicSolver::supports(root) {
+                        tracing::Span::current().record("result", "dl (auto)");
+                        RealSolver::DifferenceLogic(DifferenceLogicSolver::new(
+                            unsat_core_extraction,
+                        ))
+                    } else {
+                        tracing::Span::current().record("result", "z3 (auto)");
+                        RealSolver::Z3(Z3RealSolver::new(unsat_core_extraction))
+                    }
                 }
             },
         )
@@ -265,6 +278,7 @@ impl BooleanSolver {
 enum RealSolver {
     Empty,
     Z3(Z3RealSolver),
+    DifferenceLogic(DifferenceLogicSolver),
 }
 
 impl RealSolver {
@@ -275,6 +289,7 @@ impl RealSolver {
         match self {
             RealSolver::Empty => {}
             RealSolver::Z3(solver) => solver.push(),
+            RealSolver::DifferenceLogic(solver) => solver.push(),
         }
     }
 
@@ -285,6 +300,7 @@ impl RealSolver {
         match self {
             RealSolver::Empty => {}
             RealSolver::Z3(solver) => solver.pop(),
+            RealSolver::DifferenceLogic(solver) => solver.pop(),
         }
     }
 
@@ -293,6 +309,9 @@ impl RealSolver {
         match self {
             RealSolver::Empty => panic!("Attempted to add real constraint to empty real solver"),
             RealSolver::Z3(solver) => solver.add_constraint(negated, op, left, right, id),
+            RealSolver::DifferenceLogic(solver) => {
+                solver.add_constraint(negated, &op, &left, &right, id);
+            }
         }
     }
 
@@ -305,6 +324,7 @@ impl RealSolver {
         let result = match self {
             RealSolver::Empty => true,
             RealSolver::Z3(solver) => solver.check(),
+            RealSolver::DifferenceLogic(solver) => solver.check(),
         };
 
         tracing::Span::current().record("is_sat", result);
@@ -316,6 +336,7 @@ impl RealSolver {
         match self {
             RealSolver::Empty => None,
             RealSolver::Z3(solver) => solver.extract_unsat_core(),
+            RealSolver::DifferenceLogic(solver) => solver.extract_unsat_core(),
         }
     }
 
@@ -324,6 +345,7 @@ impl RealSolver {
         match self {
             RealSolver::Empty => RealSolver::Empty,
             RealSolver::Z3(src) => RealSolver::Z3(src.empty_solver()),
+            RealSolver::DifferenceLogic(src) => RealSolver::DifferenceLogic(src.empty_solver()),
         }
     }
 }
