@@ -7,6 +7,11 @@ default:
 release:
     cargo build --release
 
+[group('build')]
+[doc('Build the project with profile "profiling", that is release mode with debug info')]
+build-profiling:
+    cargo build --profile profiling
+
 [group('run')]
 [doc('Execute `cargo run` with provided arguments')]
 run *args:

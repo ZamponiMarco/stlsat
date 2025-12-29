@@ -20,6 +20,10 @@ path = "src/scanner.rs"
 name = "rb"
 path = "src/rb.rs"
 
+[profile.profiling]
+inherits = "release"
+debug = true
+
 [dependencies]
 clap = { version = "4.0", features = ["derive"] }
 dot_graph = "0.2.3"
