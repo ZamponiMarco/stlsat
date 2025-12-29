@@ -51,6 +51,7 @@ impl Solver {
         }
     }
 
+    #[tracing::instrument(level = "debug", skip(_root), fields(result = tracing::field::Empty))]
     #[must_use]
     pub fn factory(
         unsat_core_extraction: bool,
@@ -61,11 +62,16 @@ impl Solver {
         Solver::new(
             unsat_core_extraction,
             match (mltl, strategy) {
-                (true, _) => RealSolver::Empty,
+                (true, _) => {
+                    tracing::Span::current().record("result", "empty");
+                    RealSolver::Empty
+                }
                 (false, SolverStrategy::Z3) => {
+                    tracing::Span::current().record("result", "z3");
                     RealSolver::Z3(Z3RealSolver::new(unsat_core_extraction))
                 }
                 (false, SolverStrategy::Auto) => {
+                    tracing::Span::current().record("result", "z3 (auto)");
                     RealSolver::Z3(Z3RealSolver::new(unsat_core_extraction))
                 }
             },
@@ -262,6 +268,9 @@ enum RealSolver {
 }
 
 impl RealSolver {
+    #[tracing::instrument(level = "debug", skip(self),  fields(
+        stack.size = tracing::field::Empty // Must be set by the RealSolver implementation
+    ))]
     fn push(&mut self) {
         match self {
             RealSolver::Empty => {}
@@ -269,6 +278,9 @@ impl RealSolver {
         }
     }
 
+    #[tracing::instrument(level = "debug", skip(self),  fields(
+        stack.size = tracing::field::Empty // Must be set by the RealSolver implementation
+    ))]
     fn pop(&mut self) {
         match self {
             RealSolver::Empty => {}
@@ -276,6 +288,7 @@ impl RealSolver {
         }
     }
 
+    #[tracing::instrument(level = "debug", skip_all)]
     fn add_constraint(&mut self, negated: bool, op: RelOp, left: AExpr, right: AExpr, id: usize) {
         match self {
             RealSolver::Empty => panic!("Attempted to add real constraint to empty real solver"),
@@ -283,13 +296,22 @@ impl RealSolver {
         }
     }
 
+    #[tracing::instrument(level = "debug", skip(self), fields(
+        formula.size = tracing::field::Empty, // Must be set by the RealSolver implementation
+        is_cached = tracing::field::Empty, // Must be set by the RealSolver implementation
+        is_sat = tracing::field::Empty,
+    ))]
     fn check(&mut self) -> bool {
-        match self {
+        let result = match self {
             RealSolver::Empty => true,
             RealSolver::Z3(solver) => solver.check(),
-        }
+        };
+
+        tracing::Span::current().record("is_sat", result);
+        result
     }
 
+    #[tracing::instrument(level = "debug", skip(self))]
     fn extract_unsat_core(&self) -> Option<Vec<usize>> {
         match self {
             RealSolver::Empty => None,
@@ -297,6 +319,7 @@ impl RealSolver {
         }
     }
 
+    #[tracing::instrument(level = "debug", skip(self))]
     fn empty_solver(&self) -> Self {
         match self {
             RealSolver::Empty => RealSolver::Empty,

@@ -34,11 +34,13 @@ impl Z3RealSolver {
     }
 
     pub(super) fn push(&mut self) {
+        tracing::Span::current().record("stack.size", self.constraint_stack.len());
         self.constraint_stack.push(Vec::new());
         self.z3_solver.push();
     }
 
     pub(super) fn pop(&mut self) {
+        tracing::Span::current().record("stack.size", self.constraint_stack.len());
         if let Some(last) = self.constraint_stack.pop() {
             for key in last {
                 self.current_constraints.remove(&key);
@@ -82,7 +84,15 @@ impl Z3RealSolver {
     }
 
     pub(super) fn check(&mut self) -> bool {
+        tracing::Span::current().record("formula.size", self.current_constraints.len());
+
+        tracing::trace!(
+            "Z3 solver checking satisfiability of constraints: {:?}",
+            self.current_constraints
+        );
+
         if let Some(res) = self.result_cache {
+            tracing::Span::current().record("is_cached", true);
             res
         } else {
             let res = self.z3_solver.check();
