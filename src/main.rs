@@ -37,7 +37,9 @@ fn run_fol(example: &str, options: GeneralOptions) {
 
     tracing::info!(duration = %duration.as_secs_f64(), result = ?res, "fol_solved");
 
-    if smt_solver.options.smtlib_result {
+    if std::env::var("STLSAT_SILENT").as_deref() == Ok("1") {
+        // Silent mode
+    } else if smt_solver.options.smtlib_result {
         match res {
             Some(true) => println!("sat"),
             Some(false) => println!("unsat"),
@@ -57,7 +59,9 @@ fn run_tableau(example: &str, options: GeneralOptions, tableau_options: TableauO
 
     tracing::info!(duration = %duration.as_secs_f64(), result = ?res, "tableau_solved");
 
-    if tableau.options.smtlib_result {
+    if std::env::var("STLSAT_SILENT").as_deref() == Ok("1") {
+        return;
+    } else if tableau.options.smtlib_result {
         match res {
             Some(true) => println!("sat"),
             Some(false) => println!("unsat"),
