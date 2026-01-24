@@ -24,6 +24,9 @@ path = "src/rb.rs"
 inherits = "release"
 debug = true
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage,coverage_nightly)'] }
+
 [dependencies]
 clap = { version = "4.0", features = ["derive"] }
 dot_graph = "0.2.3"
