@@ -319,7 +319,7 @@ impl Node {
 
         let active_invariant_ends = self.compute_n();
         let invariant_starts = self.compute_o();
-        println!("N: {:?}, O: {:?}", active_invariant_ends, invariant_starts);
+        //println!("N: {:?}, O: {:?}", active_invariant_ends, invariant_starts);
 
         let condition_step_complete = target_starts.iter().any(|t| {
             invariant_ends
