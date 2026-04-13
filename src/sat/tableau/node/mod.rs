@@ -269,40 +269,7 @@ impl Node {
                 continue;
             }
 
-            match &operand.kind {
-                Formula::U {
-                    left: phi_1,
-                    interval,
-                    right: phi_2,
-                }
-                | Formula::R {
-                    interval,
-                    right: phi_1,
-                    left: phi_2,
-                } => {
-                    o_set.extend(phi_2.proposition_start_interval(Interval {
-                        lower: interval.lower,
-                        upper: interval.upper,
-                    }));
-                    o_set.extend(phi_1.proposition_start_interval(Interval {
-                        lower: interval.lower,
-                        upper: interval.lower,
-                    }));
-                }
-                Formula::F { interval, phi } => {
-                    o_set.extend(phi.proposition_start_interval(Interval {
-                        lower: interval.lower,
-                        upper: interval.upper,
-                    }));
-                }
-                Formula::G { interval, phi } => {
-                    o_set.extend(phi.proposition_start_interval(Interval {
-                        lower: interval.lower,
-                        upper: interval.lower,
-                    }));
-                }
-                _ => {}
-            }
+            o_set.extend(operand.kind.proposition_end_interval(Interval { lower: 0, upper: 0 }));
         }
 
         o_set
@@ -349,7 +316,7 @@ impl Node {
             .min()
             .unwrap_or(max_jump);
 
-        //println!("Node {}: max_jump = {:?}, jump_complete = {:?}, jump_sound = {:?}, selected jump = {}", self.id, max_jump, jump_complete, jump_sound, jump);
+        //println!("Node {}: max_jump = {:?}, jump_complete = {:?}, jump_sound = {:?}, selected jump = {}", self.id, max_jump, jump_complete, jump_sound, jump_complete.min(jump_sound).min(max_jump));
         jump_complete.min(jump_sound).min(max_jump)
     }
 }

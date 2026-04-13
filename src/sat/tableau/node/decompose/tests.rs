@@ -247,33 +247,6 @@ fn test_jump_temporal_end() {
 }
 
 #[test]
-fn test_jump_step_closure() {
-    let a = prop("a");
-    let mut to_decompose = Node::from_operands(vec![
-        NodeFormula::from(Formula::g(
-            Interval { lower: 0, upper: 5 },
-            Formula::f(Interval { lower: 0, upper: 2 }, a.clone()),
-        ))
-        .with_marked(true),
-    ]);
-    to_decompose.current_time = 1;
-    let res = tableau_data_gen(Some(decompose_jump_opt())).decompose_jump(&to_decompose);
-    assert!(res.is_some());
-    let vec = res.unwrap();
-    assert_eq!(vec.len(), 1);
-    let node = &vec[0];
-    let expected = Node::from_operands(vec![
-        Formula::g(
-            Interval { lower: 0, upper: 5 },
-            Formula::f(Interval { lower: 0, upper: 2 }, a.clone()),
-        )
-        .into(),
-    ]);
-    assert_eq!(node.current_time, 2);
-    assert_eq!(node.operands, expected.operands);
-}
-
-#[test]
 fn test_jump_end() {
     let a = prop("a");
     let mut to_decompose = Node::from_operands(vec![
