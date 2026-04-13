@@ -269,7 +269,11 @@ impl Node {
                 continue;
             }
 
-            o_set.extend(operand.kind.proposition_end_interval(Interval { lower: 0, upper: 0 }));
+            o_set.extend(
+                operand
+                    .kind
+                    .proposition_end_interval(Interval { lower: 0, upper: 0 }),
+            );
         }
 
         o_set

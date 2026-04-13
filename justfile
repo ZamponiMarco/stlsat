@@ -7,12 +7,35 @@ default:
 release:
     cargo build --release
 
+[group('build')]
+[doc('Build the project with profile "profiling", that is release mode with debug info')]
+build-profiling:
+    cargo build --profile profiling
+
+[group('run')]
+[doc('Execute `cargo run` with provided arguments')]
 run *args:
     cargo run -- {{args}}
 
+[group('run')]
+[doc('Execute `cargo run --release` with provided arguments')]
+run-release *args:
+    cargo run --release -- {{args}}
+
 [group('test')]
+[doc('Run `cargo test` with provided arguments')]
 test *args:
     cargo test {{args}}
+
+[group('test')]
+[doc('Run tests and generate a code coverage report. Requires cargo-llvm-cov <https://crates.io/crates/cargo-llvm-cov#installation>.')]
+test-coverage *args:
+    cargo +nightly llvm-cov --lib --html --output-dir target/llvm-cov --branch test  {{args}}
+
+[group('test')]
+[doc('Run a local HTTP server to serve the code coverage report')]
+serve-test-coverage *args:
+    python3 -m http.server 8001 --bind 127.0.0.1 --directory target/llvm-cov/html
 
 [group('lint')]
 [doc('Format code using `cargo fmt`')]

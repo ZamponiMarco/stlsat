@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use clap::Parser;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -6,10 +8,29 @@ pub enum ExecutionMode {
     Fol,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Default, clap::ValueEnum)]
+pub enum SolverStrategy {
+    Auto,
+    #[default]
+    Z3,
+    DL,
+}
+
+impl Display for SolverStrategy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SolverStrategy::Auto => write!(f, "auto"),
+            SolverStrategy::Z3 => write!(f, "z3"),
+            SolverStrategy::DL => write!(f, "dl"),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct GeneralOptions {
     pub mltl: bool,
     pub smtlib_result: bool,
+    pub solver: SolverStrategy,
 }
 
 #[derive(Clone, Debug)]
@@ -59,6 +80,10 @@ pub struct CliArgs {
     /// Print result in smtlib format
     #[arg(long, default_value_t = GeneralOptions::default().smtlib_result, help_heading = "General Options")]
     pub smtlib_result: bool,
+
+    /// The solver to use
+    #[arg(long, default_value_t = GeneralOptions::default().solver, help_heading = "General Options")]
+    pub solver: SolverStrategy,
 
     /// Enable unsat core extraction
     #[arg(long, default_value_t = TableauOptions::default().unsat_core_extraction, help_heading = "Tableau Options")]
@@ -116,6 +141,7 @@ pub fn get_config(source: ConfigSource) -> (ExecutionMode, GeneralOptions, Table
             let general = GeneralOptions {
                 mltl: args.mltl,
                 smtlib_result: args.smtlib_result,
+                solver: args.solver,
             };
 
             let tableau = TableauOptions {

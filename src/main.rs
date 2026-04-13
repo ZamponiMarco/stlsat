@@ -1,6 +1,7 @@
 use std::fs;
 use std::sync::atomic::Ordering;
 use std::time::Instant;
+use tracing_subscriber::prelude::*;
 
 use stlsat::sat::config::{
     ConfigSource, ExecutionMode, GeneralOptions, TableauOptions, get_config,
@@ -11,9 +12,16 @@ use stlsat::sat::tableau::node::NODE_ID;
 use stlsat::util::join_with;
 
 fn main() {
+    init_logger();
+
+    let _span =
+        tracing::info_span!("main", trace_id = format!("{:x}", rand::random::<u128>())).entered();
+
     let (mode, options, tableau_options, filename) = get_config(ConfigSource::Cli);
     let file_content = fs::read_to_string(&filename).unwrap();
     let formula = file_content.lines().next().unwrap();
+
+    tracing::info!(filename = %filename, "file_read");
 
     match mode {
         ExecutionMode::Fol => run_fol(formula, options),
@@ -27,7 +35,11 @@ fn run_fol(example: &str, options: GeneralOptions) {
     let res = smt_solver.make_smt_from_str(example);
     let duration = start.elapsed();
 
-    if smt_solver.options.smtlib_result {
+    tracing::info!(duration = %duration.as_secs_f64(), result = ?res, "fol_solved");
+
+    if std::env::var("STLSAT_SILENT").as_deref() == Ok("1") {
+        // Silent mode
+    } else if smt_solver.options.smtlib_result {
         match res {
             Some(true) => println!("sat"),
             Some(false) => println!("unsat"),
@@ -45,7 +57,11 @@ fn run_tableau(example: &str, options: GeneralOptions, tableau_options: TableauO
     let res = tableau.make_tableau_from_str(example);
     let duration = start.elapsed();
 
-    if tableau.options.smtlib_result {
+    tracing::info!(duration = %duration.as_secs_f64(), result = ?res, "tableau_solved");
+
+    if std::env::var("STLSAT_SILENT").as_deref() == Ok("1") {
+        return;
+    } else if tableau.options.smtlib_result {
         match res {
             Some(true) => println!("sat"),
             Some(false) => println!("unsat"),
@@ -92,4 +108,30 @@ fn run_tableau(example: &str, options: GeneralOptions, tableau_options: TableauO
         }
         println!("]");
     }
+}
+
+/// Initialize and configure tracing/logging.
+/// Output is configured via the `RUST_LOG` environment variable, for example:
+/// ```RUST_LOG=stlsat=trace cargo run --release -- <args>```
+/// See <https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html>
+fn init_logger() {
+    let base_format_layer = tracing_subscriber::fmt::layer()
+        // Disable colors
+        .with_ansi(false)
+        // Include target (module path)
+        .with_target(true)
+        // Log span close events, which will include attributes and duration
+        .with_span_events(tracing_subscriber::fmt::format::FmtSpan::CLOSE);
+
+    // Depending on RUST_LOG_FORMAT env variable, choose between json or compact format.
+    let format_layer = match std::env::var("RUST_LOG_FORMAT").as_deref() {
+        Ok("json") => base_format_layer.json().boxed(),
+        _ => base_format_layer.compact().boxed(),
+    };
+
+    tracing_subscriber::registry()
+        .with(format_layer)
+        // Make filter configurable via RUST_LOG env variable
+        .with(tracing_subscriber::filter::EnvFilter::from_default_env())
+        .init();
 }

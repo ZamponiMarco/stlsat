@@ -37,6 +37,9 @@ def get_stlsat_args(args):
         stlsat_args.append('--no-formula-simplifications')
     if hasattr(args, 'fol') and args.fol:
         stlsat_args.append('--fol')
+    if hasattr(args, 'solver'):
+        stlsat_args.append('--solver')
+        stlsat_args.append(args.solver)
 
     return stlsat_args
 
@@ -215,6 +218,7 @@ def make_arg_parser():
     stlsat_p.add_argument('--no-jump-rule', action='store_true', help='Disable jump rule in tableau.')
     stlsat_p.add_argument('--no-formula-simplifications', action='store_true', help='Disable syntactic formula simplifications in tableau.')
     stlsat_p.add_argument('--fol', action='store_true', help='Use FOL satisfiability checker instead of tree-based tableau.')
+    stlsat_p.add_argument('--solver', type=str, default='z3', help='Change the solver for reals used by stlsat (default: z3). Options: auto, z3, dl.')
 
     stlsat_par_p = subparsers.add_parser('stlsat-parallel', help='Run stlsat with tableau and FOL encoding in parallel.')
     stlsat_par_p.add_argument('--mltl', action='store_true', help='Use MLTL semantics for U and R operators.')
