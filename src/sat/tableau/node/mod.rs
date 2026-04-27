@@ -319,7 +319,7 @@ impl Node {
         let condition_step_sound = active_invariant_ends.iter().any(|n| {
             invariant_starts
                 .iter()
-                .any(|o| n.interval.intersects(&o.interval))
+                .any(|o| n.expr.id != o.expr.id && n.interval.intersects(&o.interval))
         });
 
         if condition_step_complete || condition_step_sound {
@@ -342,6 +342,7 @@ impl Node {
             .flat_map(|n| {
                 invariant_starts
                     .iter()
+                    .filter(|o| o.expr.id != n.expr.id)
                     .map(move |o| o.interval.lower - n.interval.upper)
             })
             .filter(|&k| k >= 1)
