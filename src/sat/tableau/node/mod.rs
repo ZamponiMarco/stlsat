@@ -161,21 +161,25 @@ impl Node {
                 continue;
             }
 
+            if operand.is_parent_active_in(self) {
+                continue;
+            }
+
             match &operand.kind {
                 Formula::U { right, .. } => {
-                    targets.extend(right.proposition_start_interval(Interval {
+                    targets.extend(right.proposition_full_interval(Interval {
                         lower: self.current_time,
                         upper: self.current_time,
                     }));
                 }
                 Formula::R { left, .. } => {
-                    targets.extend(left.proposition_end_interval(Interval {
+                    targets.extend(left.proposition_full_interval(Interval {
                         lower: self.current_time,
                         upper: self.current_time,
                     }));
                 }
                 Formula::F { phi, .. } => {
-                    targets.extend(phi.proposition_start_interval(Interval {
+                    targets.extend(phi.proposition_full_interval(Interval {
                         lower: self.current_time,
                         upper: self.current_time,
                     }));
@@ -205,10 +209,10 @@ impl Node {
                     left: phi_1,
                     ..
                 } => {
-                    obstacles.extend(phi_1.proposition_end_interval(interval.clone()));
+                    obstacles.extend(phi_1.proposition_full_interval(interval.clone()));
                 }
                 Formula::G { interval, phi } => {
-                    obstacles.extend(phi.proposition_end_interval(Interval {
+                    obstacles.extend(phi.proposition_full_interval(Interval {
                         lower: interval.upper,
                         upper: interval.upper,
                     }));
@@ -310,10 +314,10 @@ impl Node {
         let invariant_starts = self.compute_o();
         //println!("N: {:?}, O: {:?}", active_invariant_ends, invariant_starts);
 
-        let condition_step_complete = target_starts.iter().any(|t| {
-            invariant_ends.iter().any(|o| {
-                o.interval.lower <= t.interval.upper && t.interval.upper <= o.interval.upper
-            })
+        let condition_step_complete = target_starts.iter().any(|m| {
+            invariant_ends
+                .iter()
+                .any(|s| m.expr.id != s.expr.id && m.interval.intersects(&s.interval))
         });
 
         let condition_step_sound = active_invariant_ends.iter().any(|n| {
@@ -328,10 +332,11 @@ impl Node {
 
         let jump_complete = target_starts
             .iter()
-            .flat_map(|t| {
+            .flat_map(|m| {
                 invariant_ends
                     .iter()
-                    .map(move |o| o.interval.lower - t.interval.upper + 1)
+                    .filter(|s| m.expr.id != s.expr.id)
+                    .map(move |s| s.interval.lower - m.interval.upper)
             })
             .filter(|&k| k >= 1)
             .min()
