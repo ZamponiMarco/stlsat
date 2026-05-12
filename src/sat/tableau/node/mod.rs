@@ -1,22 +1,21 @@
 use crate::{
     formula::{
-        Formula, Interval,
+        Formula,
         transform::{
             FlatTransformer, FormulaSimplifier, NegationNormalFormTransformer,
             RecursiveFormulaTransformer, STLTransformer, ShiftBoundsTransformer,
         },
     },
-    sat::tableau::node::intervals::PropositionValidityInterval,
     util::join_with,
 };
 use std::{
-    collections::HashSet,
     fmt::{self, Display},
     sync::atomic::{AtomicUsize, Ordering},
 };
 
 pub mod decompose;
 pub mod intervals;
+pub mod jump;
 pub mod rewrite;
 
 pub static NODE_FORMULA_ID: AtomicUsize = AtomicUsize::new(0);
@@ -151,211 +150,6 @@ impl Node {
         self.operands.iter_mut().for_each(|f| {
             f.kind = FormulaSimplifier.visit(&f.kind);
         });
-    }
-
-    fn compute_target_set(&self) -> HashSet<PropositionValidityInterval> {
-        let mut targets = HashSet::new();
-
-        for operand in &self.operands {
-            if !operand.marked {
-                continue;
-            }
-
-            if operand.is_parent_active_in(self) {
-                continue;
-            }
-
-            match &operand.kind {
-                Formula::U { right, .. } => {
-                    targets.extend(right.proposition_full_interval(Interval {
-                        lower: self.current_time,
-                        upper: self.current_time,
-                    }));
-                }
-                Formula::R { left, .. } => {
-                    targets.extend(left.proposition_full_interval(Interval {
-                        lower: self.current_time,
-                        upper: self.current_time,
-                    }));
-                }
-                Formula::F { phi, .. } => {
-                    targets.extend(phi.proposition_full_interval(Interval {
-                        lower: self.current_time,
-                        upper: self.current_time,
-                    }));
-                }
-                _ => {}
-            }
-        }
-        targets
-    }
-
-    fn compute_obstacle_set(&self) -> HashSet<PropositionValidityInterval> {
-        let mut obstacles = HashSet::new();
-
-        for operand in &self.operands {
-            if operand.is_parent_active_in(self) {
-                continue;
-            }
-
-            match &operand.kind {
-                Formula::R {
-                    right: phi_1,
-                    interval,
-                    ..
-                }
-                | Formula::U {
-                    interval,
-                    left: phi_1,
-                    ..
-                } => {
-                    obstacles.extend(phi_1.proposition_full_interval(interval.clone()));
-                }
-                Formula::G { interval, phi } => {
-                    obstacles.extend(phi.proposition_full_interval(Interval {
-                        lower: interval.upper,
-                        upper: interval.upper,
-                    }));
-                }
-                Formula::Not(phi) => {
-                    if let Formula::Prop(e) = &**phi {
-                        obstacles.insert(PropositionValidityInterval {
-                            expr: e.clone(),
-                            interval: Interval {
-                                lower: self.current_time,
-                                upper: self.current_time,
-                            },
-                        });
-                    } else {
-                        panic!("Unexpected formula inside Not: {:?}", phi);
-                    };
-                }
-                Formula::Prop(e) => {
-                    obstacles.insert(PropositionValidityInterval {
-                        expr: e.clone(),
-                        interval: Interval {
-                            lower: self.current_time,
-                            upper: self.current_time,
-                        },
-                    });
-                }
-                _ => {}
-            }
-        }
-
-        obstacles
-    }
-
-    fn compute_n(&self) -> HashSet<PropositionValidityInterval> {
-        let mut n_set = HashSet::new();
-
-        for operand in &self.operands {
-            if !operand.marked {
-                continue;
-            }
-
-            if operand.is_parent_active_in(self) {
-                continue;
-            }
-
-            match &operand.kind {
-                Formula::U { left, .. } => {
-                    n_set.extend(left.proposition_full_interval(Interval {
-                        lower: self.current_time,
-                        upper: self.current_time,
-                    }));
-                }
-                Formula::R { right, .. } => {
-                    n_set.extend(right.proposition_full_interval(Interval {
-                        lower: self.current_time,
-                        upper: self.current_time,
-                    }));
-                }
-                Formula::G { phi, .. } => {
-                    n_set.extend(phi.proposition_full_interval(Interval {
-                        lower: self.current_time,
-                        upper: self.current_time,
-                    }));
-                }
-                _ => {}
-            }
-        }
-        n_set
-    }
-
-    fn compute_o(&self) -> HashSet<PropositionValidityInterval> {
-        let mut o_set = HashSet::new();
-
-        for operand in &self.operands {
-            if operand.is_parent_active_in(self) {
-                continue;
-            }
-
-            o_set.extend(
-                operand
-                    .kind
-                    .proposition_full_interval(Interval { lower: 0, upper: 0 }),
-            );
-        }
-
-        o_set
-    }
-
-    pub fn calculate_k_star(&self, max_jump: i32) -> i32 {
-        if max_jump <= 1 {
-            return 1;
-        }
-
-        let target_starts = self.compute_target_set();
-        let invariant_ends = self.compute_obstacle_set();
-        //println!("M: {:?}, S: {:?}", target_starts, invariant_ends);
-
-        let active_invariant_ends = self.compute_n();
-        let invariant_starts = self.compute_o();
-        //println!("N: {:?}, O: {:?}", active_invariant_ends, invariant_starts);
-
-        let condition_step_complete = target_starts.iter().any(|m| {
-            invariant_ends
-                .iter()
-                .any(|s| m.expr.id != s.expr.id && m.interval.intersects(&s.interval))
-        });
-
-        let condition_step_sound = active_invariant_ends.iter().any(|n| {
-            invariant_starts
-                .iter()
-                .any(|o| n.expr.id != o.expr.id && n.interval.intersects(&o.interval))
-        });
-
-        if condition_step_complete || condition_step_sound {
-            return 1;
-        }
-
-        let jump_complete = target_starts
-            .iter()
-            .flat_map(|m| {
-                invariant_ends
-                    .iter()
-                    .filter(|s| m.expr.id != s.expr.id)
-                    .map(move |s| s.interval.lower - m.interval.upper)
-            })
-            .filter(|&k| k >= 1)
-            .min()
-            .unwrap_or(max_jump);
-
-        let jump_sound = active_invariant_ends
-            .iter()
-            .flat_map(|n| {
-                invariant_starts
-                    .iter()
-                    .filter(|o| o.expr.id != n.expr.id)
-                    .map(move |o| o.interval.lower - n.interval.upper)
-            })
-            .filter(|&k| k >= 1)
-            .min()
-            .unwrap_or(max_jump);
-
-        //println!("Node {}: max_jump = {:?}, jump_complete = {:?}, jump_sound = {:?}, selected jump = {}", self.id, max_jump, jump_complete, jump_sound, jump_complete.min(jump_sound).min(max_jump));
-        jump_complete.min(jump_sound).min(max_jump)
     }
 }
 
