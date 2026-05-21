@@ -53,7 +53,7 @@ impl Formula {
                         left,
                         Interval {
                             lower: delta.lower + interval.lower,
-                            upper: delta.upper + interval.upper,
+                            upper: delta.upper + interval.upper - 1,
                         },
                         set,
                     );

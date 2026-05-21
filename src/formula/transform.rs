@@ -512,19 +512,18 @@ impl RecursiveFormulaTransformer for FormulaSimplifier {
         for u in &unique {
             match u {
                 // (A && (A || B)) → A
-                Formula::Or(disjuncts) => {
+                Formula::Or(disjuncts)
                     if disjuncts
                         .iter()
-                        .any(|d| unique.iter().any(|a| a.eq_structural(d)))
-                    {
-                        continue; // redundant OR
-                    }
+                        .any(|d| unique.iter().any(|a| a.eq_structural(d))) =>
+                {
+                    continue; // redundant OR
                 }
                 // (A && F[0,u](A)) → A
-                Formula::F { interval, phi, .. } if interval.lower == 0 => {
-                    if unique.iter().any(|a| a.eq_structural(phi)) {
-                        continue; // redundant F[0,u](A)
-                    }
+                Formula::F { interval, phi, .. }
+                    if interval.lower == 0 && unique.iter().any(|a| a.eq_structural(phi)) =>
+                {
+                    continue; // redundant F[0,u](A)
                 }
                 _ => {}
             }
@@ -635,19 +634,18 @@ impl RecursiveFormulaTransformer for FormulaSimplifier {
         for u in &unique {
             match u {
                 // (A || (A && B)) → A
-                Formula::And(conjuncts) => {
+                Formula::And(conjuncts)
                     if conjuncts
                         .iter()
-                        .any(|c| unique.iter().any(|a| a.eq_structural(c)))
-                    {
-                        continue; // redundant AND
-                    }
+                        .any(|c| unique.iter().any(|a| a.eq_structural(c))) =>
+                {
+                    continue; // redundant AND
                 }
                 // (A || G[0,u](A)) → A
-                Formula::G { interval, phi, .. } => {
-                    if interval.lower == 0 && unique.iter().any(|a| a.eq_structural(phi)) {
-                        continue; // redundant G[0,u](A)
-                    }
+                Formula::G { interval, phi, .. }
+                    if interval.lower == 0 && unique.iter().any(|a| a.eq_structural(phi)) =>
+                {
+                    continue; // redundant G[0,u](A)
                 }
                 _ => {}
             }
