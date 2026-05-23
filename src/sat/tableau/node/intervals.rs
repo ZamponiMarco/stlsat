@@ -2,6 +2,9 @@ use std::collections::HashSet;
 
 use crate::formula::{Expr, Formula, Interval};
 
+#[cfg(test)]
+mod tests;
+
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct PropositionValidityInterval {
     pub expr: Expr,
@@ -49,14 +52,17 @@ impl Formula {
                     left,
                     right,
                 } => {
-                    inner_full(
-                        left,
-                        Interval {
-                            lower: delta.lower + interval.lower,
-                            upper: delta.upper + interval.upper - 1,
-                        },
-                        set,
-                    );
+                    // When point interval, only the right operand appears
+                    if interval.lower < interval.upper {
+                        inner_full(
+                            left,
+                            Interval {
+                                lower: delta.lower + interval.lower,
+                                upper: delta.upper + interval.upper - 1,
+                            },
+                            set,
+                        );
+                    }
                     inner_full(
                         right,
                         Interval {
