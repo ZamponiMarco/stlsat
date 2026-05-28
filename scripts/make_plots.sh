@@ -70,7 +70,7 @@ if [ "$logic" = "MLTL" ]; then
     if [ ${#datasets[@]} -eq 0 ]; then
         datasets=("nasa-boeing" "random" "random0")
     fi
-    tools="STLSat (parallel),STLSat (tableau),STLSat (FOL),STLTree (tableau),MLTLSAT (Z3 4.15.3)"
+    tools="STLSat parallel,STLSat tableau,STLSat FOL,STLTree unsound tableau,MLTLSAT (Z3 4.15.3)"
     tool_names=("stlsat_parallel" "stlsat" "stlsat_fol" "stltree" "mltlsat")
     prefix="mltl"
 elif [ "$logic" = "STL" ]; then
@@ -80,8 +80,8 @@ elif [ "$logic" = "STL" ]; then
     if [ ${#datasets[@]} -eq 0 ]; then
         datasets=("random" "random0")
     fi
-    tools="STLSat (parallel),STLSat (tableau),STLSat (FOL),STLTree (tableau)"
-    tool_names=("stlsat_parallel" "stlsat" "stlsat_fol" "stltree")
+    tools="STLSat parallel,STLSat tableau,STLSat DL tableau,STLSat FOL,STLTree unsound tableau"
+    tool_names=("stlsat_parallel" "stlsat" "stlsat_dl" "stlsat_fol" "stltree")
     prefix="stl"
 fi
 
