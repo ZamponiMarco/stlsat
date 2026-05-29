@@ -7,6 +7,9 @@ use crate::formula::parser::parse_formula;
 use crate::formula::{AExpr, ArithOp, Expr, ExprKind, Formula, RelOp, VariableName};
 use crate::sat::config::GeneralOptions;
 
+#[cfg(test)]
+mod tests;
+
 pub struct FolSolver {
     pub options: GeneralOptions,
     bool_variables: BTreeMap<VariableName, FuncDecl>,
@@ -51,7 +54,7 @@ impl FolSolver {
         match solver.check() {
             z3::SatResult::Sat => Some(true),
             z3::SatResult::Unsat => Some(false),
-            z3::SatResult::Unknown => None,
+            z3::SatResult::Unknown => None
         }
     }
 

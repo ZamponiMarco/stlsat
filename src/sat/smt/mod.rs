@@ -7,6 +7,9 @@ use crate::formula::parser::parse_formula;
 use crate::formula::{AExpr, ArithOp, Expr, ExprKind, Formula, RelOp, VariableName};
 use crate::sat::config::GeneralOptions;
 
+#[cfg(test)]
+mod tests;
+
 pub struct SmtSolver {
     pub options: GeneralOptions,
     bool_variables: BTreeMap<VariableName, Vec<Bool>>,
@@ -84,19 +87,13 @@ impl SmtSolver {
                 left_b.implies(right_b)
             }
             Formula::G { interval, phi, .. } => {
-                let lower = time + interval.lower;
-                let upper = time + interval.upper;
-
-                let parts: Vec<Bool> = (lower..=upper)
+                let parts: Vec<Bool> = (time + interval.lower..=time + interval.upper)
                     .map(|i| self.encode_formula(*phi.clone(), i, time_horizon))
                     .collect();
                 Bool::and(&parts)
             }
             Formula::F { interval, phi, .. } => {
-                let lower = time + interval.lower;
-                let upper = time + interval.upper;
-
-                let parts: Vec<Bool> = (lower..=upper)
+                let parts: Vec<Bool> = (time + interval.lower..=time + interval.upper)
                     .map(|i| self.encode_formula(*phi.clone(), i, time_horizon))
                     .collect();
                 Bool::or(&parts)
@@ -107,14 +104,17 @@ impl SmtSolver {
                 right,
                 ..
             } => {
-                let lower = time + interval.lower;
-                let upper = time + interval.upper;
-
-                let witnesses: Vec<Bool> = (lower..=upper)
+                let witnesses: Vec<Bool> = (time + interval.lower..=time + interval.upper)
                     .map(|i| {
                         let right_at_i = self.encode_formula(*right.clone(), i, time_horizon);
 
-                        let left_until_i: Vec<Bool> = (time..i)
+                        let left_range = if self.options.mltl {
+                            (time + interval.lower)..i // [time + a, i)
+                        } else {
+                            time..(i + 1) // [time, i]
+                        };
+
+                        let left_until_i: Vec<Bool> = left_range
                             .map(|j| self.encode_formula(*left.clone(), j, time_horizon))
                             .collect();
 
@@ -130,14 +130,17 @@ impl SmtSolver {
                 right,
                 ..
             } => {
-                let lower = time + interval.lower;
-                let upper = time + interval.upper;
-
-                let obligations: Vec<Bool> = (lower..=upper)
+                let obligations: Vec<Bool> = (time + interval.lower..=time + interval.upper)
                     .map(|i| {
                         let right_at_i = self.encode_formula(*right.clone(), i, time_horizon);
 
-                        let released_before_i: Vec<Bool> = (time..i)
+                        let left_range = if self.options.mltl {
+                            (time + interval.lower)..i // [time + a, i)
+                        } else {
+                            time..(i + 1) // [time, i]
+                        };
+
+                        let released_before_i: Vec<Bool> = left_range
                             .map(|j| self.encode_formula(*left.clone(), j, time_horizon))
                             .collect();
 
