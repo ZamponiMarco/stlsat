@@ -1,12 +1,11 @@
 use std::fs;
 use std::sync::atomic::Ordering;
 use std::time::Instant;
+use stlsat::sat::fol::FolSolver;
+use stlsat::sat::smt::SmtSolver;
 use tracing_subscriber::prelude::*;
 
-use stlsat::sat::config::{
-    ConfigSource, ExecutionMode, GeneralOptions, TableauOptions, get_config,
-};
-use stlsat::sat::smt::SmtSolver;
+use stlsat::sat::config::{ConfigSource, GeneralOptions, SolverEngine, TableauOptions, get_config};
 use stlsat::sat::tableau::Tableau;
 use stlsat::sat::tableau::node::NODE_ID;
 use stlsat::util::join_with;
@@ -17,29 +16,52 @@ fn main() {
     let _span =
         tracing::info_span!("main", trace_id = format!("{:x}", rand::random::<u128>())).entered();
 
-    let (mode, options, tableau_options, filename) = get_config(ConfigSource::Cli);
+    let (options, tableau_options, filename) = get_config(ConfigSource::Cli);
     let file_content = fs::read_to_string(&filename).unwrap();
     let formula = file_content.lines().next().unwrap();
 
     tracing::info!(filename = %filename, "file_read");
 
-    match mode {
-        ExecutionMode::Fol => run_fol(formula, options),
-        ExecutionMode::Tableau => run_tableau(formula, options, tableau_options),
+    match options.engine {
+        SolverEngine::Smt => run_smt(formula, options),
+        SolverEngine::Fol => run_fol(formula, options),
+        SolverEngine::Tableau => run_tableau(formula, options, tableau_options),
+    }
+}
+
+fn run_smt(example: &str, options: GeneralOptions) {
+    let start = Instant::now();
+    let mut smt_solver = SmtSolver::new(options);
+    let res = smt_solver.make_smt_from_str(example);
+    let duration = start.elapsed();
+
+    tracing::info!(duration = %duration.as_secs_f64(), result = ?res, "smt_solved");
+
+    if std::env::var("STLSAT_SILENT").as_deref() == Ok("1") {
+        // Silent mode
+    } else if smt_solver.options.smtlib_result {
+        match res {
+            Some(true) => println!("sat"),
+            Some(false) => println!("unsat"),
+            None => println!("unknown"),
+        }
+    } else {
+        println!("SMT result: {res:?}");
+        println!("DURATION_SEC: {:.6}", duration.as_secs_f64());
     }
 }
 
 fn run_fol(example: &str, options: GeneralOptions) {
     let start = Instant::now();
-    let mut smt_solver = SmtSolver::new(options);
-    let res = smt_solver.make_smt_from_str(example);
+    let mut fol_solver = FolSolver::new(options);
+    let res = fol_solver.make_fol_from_str(example);
     let duration = start.elapsed();
 
     tracing::info!(duration = %duration.as_secs_f64(), result = ?res, "fol_solved");
 
     if std::env::var("STLSAT_SILENT").as_deref() == Ok("1") {
         // Silent mode
-    } else if smt_solver.options.smtlib_result {
+    } else if fol_solver.options.smtlib_result {
         match res {
             Some(true) => println!("sat"),
             Some(false) => println!("unsat"),
