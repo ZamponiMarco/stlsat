@@ -54,7 +54,7 @@ impl FolSolver {
         match solver.check() {
             z3::SatResult::Sat => Some(true),
             z3::SatResult::Unsat => Some(false),
-            z3::SatResult::Unknown => None
+            z3::SatResult::Unknown => None,
         }
     }
 
