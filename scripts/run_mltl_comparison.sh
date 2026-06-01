@@ -14,7 +14,7 @@ max_mem=30720
 iters=5
 z3bin=z3
 bench_sets=("nasa-boeing" "random" "random0")
-tools=("stlsat" "stlsat_fol" "stlsat_parallel" "stlsat_nofs" "mltlsat" "stltree")
+tools=("stlsat" "stlsat_fol" "stlsat_parallel" "stlsat_nofs" "stlsat_smt" "mltlsat" "stltree")
 outdir=./output_mltl
 
 while [[ $# -gt 0 ]]; do
@@ -72,13 +72,13 @@ set -x
 
 if [[ " ${tools[@]} " =~ " stlsat " ]]; then
     for bench_set in "${bench_sets[@]}"; do
-        ./run_bench.py --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_${bench_set}.csv" -b "${mltlsatdir}/" "${mltlsatdir}/benchmark_list/${bench_set}.list" stlsat --mltl &> "${outdir}/stlsat_${bench_set}.log"
+        ./run_bench.py --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_${bench_set}.csv" -b "${mltlsatdir}/" "${mltlsatdir}/benchmark_list/${bench_set}.list" stlsat --mltl --engine tableau &> "${outdir}/stlsat_${bench_set}.log"
     done
 fi
 
 if [[ " ${tools[@]} " =~ " stlsat_fol " ]]; then
     for bench_set in "${bench_sets[@]}"; do
-        ./run_bench.py --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_fol_${bench_set}.csv" -b "${mltlsatdir}/" "${mltlsatdir}/benchmark_list/${bench_set}.list" stlsat --mltl --fol &> "${outdir}/stlsat_fol_${bench_set}.log"
+        ./run_bench.py --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_fol_${bench_set}.csv" -b "${mltlsatdir}/" "${mltlsatdir}/benchmark_list/${bench_set}.list" stlsat --mltl --engine fol &> "${outdir}/stlsat_fol_${bench_set}.log"
     done
 fi
 
@@ -90,7 +90,13 @@ fi
 
 if [[ " ${tools[@]} " =~ " stlsat_nofs " ]]; then
     for bench_set in "${bench_sets[@]}"; do
-        ./run_bench.py --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_nofs_${bench_set}.csv" -b "${mltlsatdir}/" "${mltlsatdir}/benchmark_list/${bench_set}.list" stlsat --mltl --no-formula-simplifications &> "${outdir}/stlsat_nofs_${bench_set}.log"
+        ./run_bench.py --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_nofs_${bench_set}.csv" -b "${mltlsatdir}/" "${mltlsatdir}/benchmark_list/${bench_set}.list" stlsat --mltl --no-formula-simplifications --engine tableau &> "${outdir}/stlsat_nofs_${bench_set}.log"
+    done
+fi
+
+if [[ " ${tools[@]} " =~ " stlsat_smt " ]]; then
+    for bench_set in "${bench_sets[@]}"; do
+        ./run_bench.py --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_smt_${bench_set}.csv" -b "${mltlsatdir}/" "${mltlsatdir}/benchmark_list/${bench_set}.list" stlsat --mltl --engine smt &> "${outdir}/stlsat_smt_${bench_set}.log"
     done
 fi
 
