@@ -47,7 +47,7 @@ impl FolSolver {
     }
 
     pub fn make_fol_from_formula(&mut self, formula: Formula) -> Option<bool> {
-        let solver = Solver::new();
+        let solver = Solver::new_for_logic("LRA").unwrap_or_default();
         let smt_formula = self.encode_formula(formula, &Int::from_i64(0));
         solver.assert(smt_formula);
 
