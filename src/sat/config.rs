@@ -22,8 +22,8 @@ impl Display for SolverEngine {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Default, clap::ValueEnum)]
 pub enum SolverStrategy {
-    Auto,
     #[default]
+    Auto,
     Z3,
     DL,
 }
@@ -63,7 +63,7 @@ impl Default for TableauOptions {
     fn default() -> Self {
         TableauOptions {
             max_depth: 1000000,
-            solver: SolverStrategy::Z3,
+            solver: SolverStrategy::Auto,
             graph_output: None,
             memoization: true,
             simple_first: true,
@@ -85,14 +85,6 @@ pub struct CliArgs {
 
     #[arg(long, default_value_t = GeneralOptions::default().engine, help_heading = "General Options")]
     pub engine: SolverEngine,
-
-    /// Enable FOL encoding
-    #[arg(long, default_value_t = false, help_heading = "General Options")]
-    pub fol: bool,
-
-    /// Enable SMT encoding
-    #[arg(long, default_value_t = false, help_heading = "General Options")]
-    pub smt: bool,
 
     /// Use MLTL semantics
     #[arg(long, default_value_t = GeneralOptions::default().mltl, help_heading = "General Options")]
