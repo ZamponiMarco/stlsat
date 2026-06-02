@@ -16,6 +16,8 @@ pub mod transform;
 
 pub type VariableName = Arc<str>;
 
+pub static FORMULA_ID: AtomicUsize = AtomicUsize::new(0);
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum ArithOp {
     Add,
@@ -195,8 +197,6 @@ pub enum Formula {
         right: Box<Formula>,
     },
 }
-
-pub static FORMULA_ID: AtomicUsize = AtomicUsize::new(0);
 
 impl Formula {
     #[must_use]

@@ -143,7 +143,7 @@ impl Tableau {
         let mut solver = Solver::factory(
             self.tableau_options.unsat_core_extraction,
             self.options.mltl,
-            self.options.solver,
+            self.tableau_options.solver,
             &root,
         );
         solver.push();
