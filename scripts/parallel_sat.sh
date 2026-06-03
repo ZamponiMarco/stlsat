@@ -7,7 +7,7 @@ shift
 EXTRA_ARGS=("$@")
 STLSAT="../target/release/stlsat"
 
-parallel --tag --lb --halt now,success=1 ::: \
+parallel --lb --halt now,success=1 ::: \
   "$STLSAT --engine tableau ${EXTRA_ARGS[*]} $INPUT" \
   "$STLSAT --engine fol ${EXTRA_ARGS[*]} $INPUT" \
   "$STLSAT --engine smt ${EXTRA_ARGS[*]} $INPUT"

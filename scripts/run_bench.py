@@ -147,12 +147,12 @@ def exec_bench(fname, args):
     mem_match = mem_pattern.search(raw_stderr)
     result_match = result_pattern.search(raw_stdout)
     if not result_match:
-        result_match = result_pattern.search(raw_stderr)
-    result = result_match[0] if result_match else 'no result!'
+        return (-1, -1, 'No result!')
+
     return (
         float(time_match.group(1)),
         int(mem_match.group(1)),
-        result
+        result_match[0]
     )
 
 def iter_bench(fname, args):
