@@ -10,7 +10,7 @@ timeout=120
 jobs=4
 max_mem=30720
 iters=5
-tools=("stlsat" "stlsat_fol" "stlsat_parallel" "stlsat_dl" "stlsat_nofs" "stlsat_smt" "stltree")
+tools=("stlsat" "stlsat_fol" "stlsat_smt" "stlsat_parallel" "stltree")
 bench_sets=("random" "random0")
 outdir=./output_stl
 
@@ -79,27 +79,15 @@ if [[ " ${tools[@]} " =~ " stlsat_fol " ]]; then
     done
 fi
 
-if [[ " ${tools[@]} " =~ " stlsat_parallel " ]]; then
-    for bench_set in "${bench_sets[@]}"; do
-        ./run_bench.py --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_parallel_${bench_set}.csv" -b "${benchdir}/${bench_set}/" "${benchdir}/${bench_set}/${bench_set}.list" stlsat-parallel &> "${outdir}/stlsat_parallel_${bench_set}.log"
-    done
-fi
-
-if [[ " ${tools[@]} " =~ " stlsat_dl " ]]; then
-    for bench_set in "${bench_sets[@]}"; do
-        ./run_bench.py --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_dl_${bench_set}.csv" -b "${benchdir}/${bench_set}/" "${benchdir}/${bench_set}/${bench_set}.list" stlsat --engine tableau --solver auto &> "${outdir}/stlsat_dl_${bench_set}.log"
-    done
-fi
-
-if [[ " ${tools[@]} " =~ " stlsat_nofs " ]]; then
-    for bench_set in "${bench_sets[@]}"; do
-        ./run_bench.py --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_nofs_${bench_set}.csv" -b "${benchdir}/${bench_set}/" "${benchdir}/${bench_set}/${bench_set}.list" stlsat --no-formula-simplifications --engine tableau &> "${outdir}/stlsat_nofs_${bench_set}.log"
-    done
-fi
-
 if [[ " ${tools[@]} " =~ " stlsat_smt " ]]; then
     for bench_set in "${bench_sets[@]}"; do
         ./run_bench.py --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_smt_${bench_set}.csv" -b "${benchdir}/${bench_set}/" "${benchdir}/${bench_set}/${bench_set}.list" stlsat --engine smt &> "${outdir}/stlsat_smt_${bench_set}.log"
+    done
+fi
+
+if [[ " ${tools[@]} " =~ " stlsat_parallel " ]]; then
+    for bench_set in "${bench_sets[@]}"; do
+        ./run_bench.py --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_parallel_${bench_set}.csv" -b "${benchdir}/${bench_set}/" "${benchdir}/${bench_set}/${bench_set}.list" stlsat-parallel &> "${outdir}/stlsat_parallel_${bench_set}.log"
     done
 fi
 

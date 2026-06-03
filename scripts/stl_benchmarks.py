@@ -44,10 +44,6 @@ def check_benchmark(bench_name, bench_file, stltree_path, timeout, iters):
     args_rust_tableau = argp.parse_args(['--iters', str(iters), '--timeout', str(timeout), 'dummy.list', 'stlsat', '--engine', 'tableau'])
     _, results['time_rust_tableau'], _, results['result_rust_tableau'] = iter_bench(bench_file, args_rust_tableau)
 
-    # Rust tableau-based checking with dl solver
-    args_rust_tableau_dl = argp.parse_args(['--iters', str(iters), '--timeout', str(timeout), 'dummy.list', 'stlsat', '--engine', 'tableau', '--solver', 'auto'])
-    _, results['time_rust_tableau_dl'], _, results['result_rust_tableau_dl'] = iter_bench(bench_file, args_rust_tableau_dl)
-
     return results
 
 
@@ -63,13 +59,12 @@ def pretty_print(results, timeout, csvfile):
             write_timeout(r['time_fol']), r['result_fol'],
             write_timeout(r['time_python_tableau']), r['result_python_tableau'],
             write_timeout(r['time_rust_tableau']), r['result_rust_tableau'],
-            write_timeout(r['time_rust_tableau_dl']), r['result_rust_tableau_dl'],
         ]
         for r in results
     ]
 
     # Table header
-    header = ["Dataset", f"SMT (s)", "SMT Result", f"FOL (s)", "FOL Result", f"Python Tableau (s)", "Python Tableau Result", f"Rust Tableau (s)", "Rust Tableau Result", f"Rust Tableau DL (s)", "Rust Tableau DL Result"]
+    header = ["Dataset", f"SMT (s)", "SMT Result", f"FOL (s)", "FOL Result", f"Python Tableau (s)", "Python Tableau Result", f"Rust Tableau (s)", "Rust Tableau Result"]
 
     print(tabulate(results_matrix, headers=header))
 
