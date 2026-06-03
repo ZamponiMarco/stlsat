@@ -103,10 +103,9 @@ for dataset in "${datasets[@]}"; do
 done
 
 
-# Generate scatter plots
+# Generate scatter plots tableau vs FOL
 tools_scatter="STLSat (tableau),STLSat (FOL)"
 tool_names_scatter=("stlsat" "stlsat_fol")
-
 
 y_label=
 plot_no=0
@@ -115,5 +114,20 @@ for dataset in "${datasets[@]}"; do
         y_label="--no-y-label"
     fi
     ((plot_no++))
-    python3 plot.py "${tools_scatter}" "$(make_tools_csvs "${basedir}" "${dataset}" "${tool_names_scatter[@]}")" ${timeout} --scatter ${y_label} -o "${outdir}/${prefix}_${dataset}"
+    python3 plot.py "${tools_scatter}" "$(make_tools_csvs "${basedir}" "${dataset}" "${tool_names_scatter[@]}")" ${timeout} --scatter ${y_label} -o "${outdir}/${prefix}_fol_${dataset}"
+done
+
+
+# Generate scatter plots tableau vs SMT
+tools_scatter="STLSat (tableau),STLSat (SMT)"
+tool_names_scatter=("stlsat" "stlsat_smt")
+
+y_label=
+plot_no=0
+for dataset in "${datasets[@]}"; do
+    if ((plot_no > 0)) && [ "$adjacent_plots" = true ]; then
+        y_label="--no-y-label"
+    fi
+    ((plot_no++))
+    python3 plot.py "${tools_scatter}" "$(make_tools_csvs "${basedir}" "${dataset}" "${tool_names_scatter[@]}")" ${timeout} --scatter ${y_label} -o "${outdir}/${prefix}_smt_${dataset}"
 done
