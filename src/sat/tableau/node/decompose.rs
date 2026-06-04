@@ -299,7 +299,7 @@ impl Tableau {
             .iter()
             .filter_map(|op| {
                 if let Some(interval) = op.kind.get_interval()
-                    && node.current_time < interval.upper
+                    && node.current_time + jump <= interval.upper
                 {
                     Some(op.clone().with_marked(false))
                 } else {

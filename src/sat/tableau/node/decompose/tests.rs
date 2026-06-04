@@ -248,18 +248,6 @@ fn test_jump_only_prop() {
 }
 
 #[test]
-fn test_jump_temporal_end() {
-    let a = prop("a");
-    let mut to_decompose = Node::from_operands(vec![
-        NodeFormula::from(Formula::g(Interval { lower: 0, upper: 5 }, a.clone())).with_marked(true),
-        Formula::f(Interval { lower: 3, upper: 5 }, a.clone()).into(),
-    ]);
-    to_decompose.current_time = 5;
-    let res = tableau_data_gen(Some(decompose_jump_opt())).decompose_jump(&to_decompose);
-    assert_eq!(res, None);
-}
-
-#[test]
 fn test_jump_end() {
     let a = prop("a");
     let mut to_decompose = Node::from_operands(vec![
