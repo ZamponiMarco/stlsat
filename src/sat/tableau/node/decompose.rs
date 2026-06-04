@@ -1,4 +1,3 @@
-use std::collections::BTreeSet;
 use std::vec;
 
 use crate::formula::Formula;
@@ -287,39 +286,11 @@ impl Tableau {
 
     #[must_use]
     pub fn decompose_jump(&self, node: &Node) -> Option<Vec<Node>> {
-        fn sorted_time_instants(node: &Node) -> BTreeSet<i32> {
-            fn top_level_interval(formula: &NodeFormula, node: &Node) -> Option<Vec<i32>> {
-                match &formula.kind {
-                    Formula::G { interval, .. } | Formula::R { interval, .. }
-                        if !formula.is_parent_active_in(node) =>
-                    {
-                        Some(vec![interval.lower, interval.upper])
-                    }
-                    Formula::F { interval, .. } | Formula::U { interval, .. } => {
-                        Some(vec![interval.lower, interval.upper])
-                    }
-                    _ => None,
-                }
-            }
-
-            node.operands
-                .iter()
-                .filter_map(|f| top_level_interval(f, node))
-                .flatten()
-                .collect()
-        }
-
         // Select jump length
         let jump = if !self.tableau_options.jump_rule_enabled {
             1
-        } else if let Some(target_time) = sorted_time_instants(node)
-            .into_iter()
-            .find(|&t| t > node.current_time)
-        {
-            let max_jump = target_time - node.current_time;
-            node.calculate_k_star(max_jump)
         } else {
-            return None;
+            node.calculate_k_star()
         };
 
         // Retain only temporal operators

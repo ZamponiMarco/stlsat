@@ -1,6 +1,9 @@
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 
-use crate::formula::{Formula, Interval};
+use crate::{
+    formula::{Formula, Interval},
+    sat::tableau::node::NodeFormula,
+};
 
 use super::{Node, intervals::PropositionValidityInterval};
 
@@ -146,7 +149,6 @@ impl Node {
     fn compute_jump_bound(
         targets: &HashSet<PropositionValidityInterval>,
         obstacles: &HashSet<PropositionValidityInterval>,
-        max_jump: i32,
     ) -> i32 {
         let cross = || {
             targets.iter().flat_map(|a| {
@@ -163,24 +165,64 @@ impl Node {
             .map(|(a, b)| b.interval.lower - a.interval.upper)
             .filter(|&k| k >= 1)
             .min()
-            .unwrap_or(max_jump)
+            .unwrap_or(i32::MAX)
     }
 
-    pub fn calculate_k_star(&self, max_jump: i32) -> i32 {
+    pub fn compute_k(&self) -> i32 {
+        fn sorted_time_instants(node: &Node) -> BTreeSet<i32> {
+            fn top_level_interval(formula: &NodeFormula, node: &Node) -> Option<Vec<i32>> {
+                match &formula.kind {
+                    Formula::G { interval, .. } | Formula::R { interval, .. }
+                        if !formula.is_parent_active_in(node) =>
+                    {
+                        Some(vec![interval.lower, interval.upper])
+                    }
+                    Formula::F { interval, .. } | Formula::U { interval, .. } => {
+                        Some(vec![interval.lower, interval.upper])
+                    }
+                    _ => None,
+                }
+            }
+
+            node.operands
+                .iter()
+                .filter_map(|f| top_level_interval(f, node))
+                .flatten()
+                .collect()
+        }
+
+        if let Some(target_time) = sorted_time_instants(self)
+            .into_iter()
+            .find(|&t| t > self.current_time)
+        {
+            target_time - self.current_time
+        } else {
+            i32::MAX
+        }
+    }
+
+    pub fn calculate_k_star(&self) -> i32 {
+        let max_jump = self.compute_k();
+
         if max_jump <= 1 {
             return 1;
         }
 
         let completeness_targets = self.compute_target_set();
         let completeness_obstacles = self.compute_obstacle_set();
+
+        let jump_complete =
+            Self::compute_jump_bound(&completeness_targets, &completeness_obstacles);
+
+        if jump_complete <= 1 {
+            return 1;
+        }
+
         let soundness_targets = self.compute_n();
         let soundness_obstacles = self.compute_o();
 
-        let jump_complete =
-            Self::compute_jump_bound(&completeness_targets, &completeness_obstacles, max_jump);
-        let jump_sound =
-            Self::compute_jump_bound(&soundness_targets, &soundness_obstacles, max_jump);
+        let jump_sound = Self::compute_jump_bound(&soundness_targets, &soundness_obstacles);
 
-        jump_complete.min(jump_sound)
+        max_jump.min(jump_complete).min(jump_sound)
     }
 }
