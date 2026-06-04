@@ -51,22 +51,17 @@ impl Node {
 
             match &operand.kind {
                 Formula::R {
-                    right: phi_1,
+                    right: phi,
                     interval,
                     ..
                 }
                 | Formula::U {
                     interval,
-                    left: phi_1,
+                    left: phi,
                     ..
-                } => {
-                    obstacles.extend(phi_1.proposition_full_interval(interval.clone()));
                 }
-                Formula::G { interval, phi } => {
-                    obstacles.extend(phi.proposition_full_interval(Interval {
-                        lower: interval.upper,
-                        upper: interval.upper,
-                    }));
+                | Formula::G { interval, phi } => {
+                    obstacles.extend(phi.proposition_full_interval(interval.clone()));
                 }
                 Formula::Not(phi) => {
                     if let Formula::Prop(e) = &**phi {

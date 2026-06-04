@@ -45,8 +45,8 @@ fn intersection_soundness_forces_one() {
 #[test]
 fn gap_completeness_computed() {
     let mut node = Node::from_operands(vec![
-        NodeFormula::from(Formula::f(Interval { lower: 3, upper: 8 }, prop("b"))).with_marked(true),
-        Formula::g(Interval { lower: 0, upper: 5 }, prop("a")).into(),
+        Formula::g(Interval { lower: 5, upper: 8 }, prop("b")).into(),
+        NodeFormula::from(Formula::f(Interval { lower: 0, upper: 3 }, prop("a"))).with_marked(true),
     ]);
     node.current_time = 0;
     assert_eq!(node.calculate_k_star(10), 5);

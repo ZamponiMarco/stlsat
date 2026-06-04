@@ -263,13 +263,6 @@ impl Tableau {
             node.current_time
         );
 
-        // Node where R is satisfied now
-        let mut new_node1 = node.clone();
-        new_node1.operands[i] = right.temporal_expansion(node.current_time, None);
-        new_node1
-            .operands
-            .insert(i, left.temporal_expansion(node.current_time, None));
-
         // Node in which R is not satisfied now (OR, q)
         let mut new_node2 = node.clone();
         new_node2.operands[i] = right.temporal_expansion(node.current_time, Some(r_formula.id));
@@ -279,7 +272,17 @@ impl Tableau {
                 .insert(i, r_formula.clone().with_marked(true));
         }
 
-        vec![new_node1, new_node2]
+        if node.current_time < interval.upper {
+            // Node where R is satisfied now (p, q)
+            let mut new_node1 = node.clone();
+            new_node1.operands[i] = right.temporal_expansion(node.current_time, None);
+            new_node1
+                .operands
+                .insert(i, left.temporal_expansion(node.current_time, None));
+            vec![new_node1, new_node2]
+        } else {
+            vec![new_node2]
+        }
     }
 
     #[must_use]
