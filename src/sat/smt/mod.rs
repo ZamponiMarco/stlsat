@@ -47,7 +47,7 @@ impl SmtSolver {
     }
 
     pub fn make_smt_from_formula(&mut self, formula: Formula) -> Option<bool> {
-        let solver = Solver::new_for_logic("QF_LRA").unwrap_or_default();
+        let solver = Solver::new();
 
         let time_horizon = formula.horizon() as usize;
         let smt_formula = self.encode_formula(formula, 0, time_horizon);

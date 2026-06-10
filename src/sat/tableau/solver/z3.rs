@@ -22,7 +22,7 @@ pub(super) struct Z3RealSolver {
 impl Z3RealSolver {
     pub(super) fn new(unsat_core_extraction: bool) -> Self {
         Z3RealSolver {
-            z3_solver: Z3Solver::new_for_logic("QF_LRA").unwrap_or_default(),
+            z3_solver: Z3Solver::new(),
             z3_variables: BTreeMap::new(),
             z3_ast_cache: HashMap::new(),
             current_constraints: HashSet::new(),
