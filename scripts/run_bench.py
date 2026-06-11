@@ -35,10 +35,10 @@ def get_stlsat_args(args):
         stlsat_args.append('--no-jump-rule')
     if args.no_formula_simplifications:
         stlsat_args.append('--no-formula-simplifications')
-    if hasattr(args, 'engine'):
+    if hasattr(args, 'engine') and args.engine:
         stlsat_args.append('--engine')
         stlsat_args.append(args.engine)
-    if hasattr(args, 'solver'):
+    if hasattr(args, 'solver') and args.solver:
         stlsat_args.append('--solver')
         stlsat_args.append(args.solver)
 
@@ -218,8 +218,8 @@ def make_arg_parser():
     stlsat_p.add_argument('--no-formula-optimizations', action='store_true', help='Disable formula optimizations in tableau.')
     stlsat_p.add_argument('--no-jump-rule', action='store_true', help='Disable jump rule in tableau.')
     stlsat_p.add_argument('--no-formula-simplifications', action='store_true', help='Disable syntactic formula simplifications in tableau.')
-    stlsat_p.add_argument('--engine', type=str, default='tableau', help='Choose satisfiability engine (default: tableau). Options: tableau, fol, smt.')
-    stlsat_p.add_argument('--solver', type=str, default='z3', help='Change the solver for reals used by stlsat (default: z3). Options: auto, z3, dl.')
+    stlsat_p.add_argument('--engine', type=str, help='Choose satisfiability engine (default: tableau). Options: tableau, fol, smt.')
+    stlsat_p.add_argument('--solver', type=str, help='Change the solver for reals used by stlsat (default: z3). Options: auto, z3, dl.')
 
     stlsat_par_p = subparsers.add_parser('stlsat-parallel', help='Run stlsat with tableau and FOL encoding in parallel.')
     stlsat_par_p.add_argument('--mltl', action='store_true', help='Use MLTL semantics for U and R operators.')
