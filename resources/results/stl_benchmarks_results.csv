@@ -1,11 +1,11 @@
-Dataset,SMT (s),SMT Result,FOL (s),FOL Result,Python Tableau (s),Python Tableau Result,Rust Tableau (s),Rust Tableau Result,Rust Tableau DL (s),Rust Tableau DL Result
-cars,0.754,sat,0.02,sat,0.488,sat,0.492,sat,0.0,sat
-thermostat,0.522,sat,0.03,sat,0.47,sat,0.33,sat,0.0,sat
-watertank,0.56,sat,0.02,sat,0.48,sat,2.582,sat,0.01,sat
-railroad,0.616,unsat,0.05,unsat,5.356,unsat,2.912,unsat,0.02,unsat
-batteries,0.586,sat,0.182,sat,0.568,sat,3.794,sat,0.01,sat
-pcv,28.574,sat,0.02,sat,2.226,sat,-1,TO,24.576,sat
-mtl_requirements,16.55,unsat,0.02,unsat,1.442,unsat,0.59,unsat,0.298,unsat
-req_cps,-1,TO,0.02,unsat,3.082,unsat,-1,TO,-1,TO
-avionics,22.116,sat,-1,TO,8.598,sat,-1,TO,-1,TO
-irrigation,0.736,unsat,-1,TO,0.658,unsat,10.692,unsat,0.04,unsat
+Dataset,SMT (s),SMT Result,FOL (s),FOL Result,Python Tableau (s),Python Tableau Result,Rust Tableau (s),Rust Tableau Result
+cars,0.02,sat,0.02,sat,0.5,sat,0.0,sat
+thermostat,0.02,sat,0.03,sat,0.48,sat,0.0,sat
+watertank,0.02,sat,0.02,sat,0.492,sat,0.01,sat
+railroad,0.02,unsat,0.13,unsat,5.444,unsat,0.02,unsat
+batteries,0.02,sat,0.2,sat,0.58,sat,0.01,sat
+pcv,1.262,sat,0.02,sat,2.272,sat,24.684,sat
+mtl_requirements,0.21,unsat,0.02,unsat,1.444,unsat,0.28200000000000003,unsat
+req_cps,-1,TO,0.02,unsat,3.076,unsat,-1,TO
+avionics,37.908,sat,-1,TO,8.688,sat,-1,TO
+irrigation,0.03,unsat,-1,TO,0.67,unsat,0.036,unsat
