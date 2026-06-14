@@ -29,19 +29,19 @@ def check_benchmark(bench_name, bench_file, stltree_path, timeout, iters):
     results = {'dataset': bench_name}
 
     # SMT BMC-like encoding
-    args_smt = argp.parse_args(['--iters', str(iters), '--timeout', str(timeout), 'dummy.list', 'stlsat', '--engine', 'smt'])
+    args_smt = argp.parse_args(['--iters', str(iters), '--timeout', str(timeout), 'dummy.list', '--bash-time', 'stlsat', '--engine', 'smt'])
     _, results['time_smt'], _, results['result_smt'] = iter_bench(bench_file, args_smt)
 
     # FOL encoding
-    args_fol = argp.parse_args(['--iters', str(iters), '--timeout', str(timeout), 'dummy.list', 'stlsat', '--engine', 'fol'])
+    args_fol = argp.parse_args(['--iters', str(iters), '--timeout', str(timeout), 'dummy.list', '--bash-time', 'stlsat', '--engine', 'fol'])
     _, results['time_fol'], _, results['result_fol'] = iter_bench(bench_file, args_fol)
 
     # STLTree tableau-based checking
-    args_python_tableau = argp.parse_args(['--iters', str(iters), '--timeout', str(timeout), 'dummy.list', 'stltree', stltree_path])
+    args_python_tableau = argp.parse_args(['--iters', str(iters), '--timeout', str(timeout), 'dummy.list', '--bash-time', 'stltree', stltree_path])
     _, results['time_python_tableau'], _, results['result_python_tableau'] = iter_bench(bench_file, args_python_tableau)
 
     # Rust tableau-based checking
-    args_rust_tableau = argp.parse_args(['--iters', str(iters), '--timeout', str(timeout), 'dummy.list', 'stlsat', '--engine', 'tableau'])
+    args_rust_tableau = argp.parse_args(['--iters', str(iters), '--timeout', str(timeout), 'dummy.list', '--bash-time', 'stlsat', '--engine', 'tableau'])
     _, results['time_rust_tableau'], _, results['result_rust_tableau'] = iter_bench(bench_file, args_rust_tableau)
 
     return results

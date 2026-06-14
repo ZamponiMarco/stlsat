@@ -12,7 +12,7 @@ import joblib
 from tabulate import tabulate
 import csv
 
-time_pattern = re.compile(r"Total elapsed time \(s\): ([0-9]+\.[0-9]+)")
+time_pattern = re.compile(r"Total elapsed time \(s\): ([0-9]+(\.|,)[0-9]+)")
 mem_pattern = re.compile(r"Max memory used \(KB\): ([0-9]+)")
 result_pattern = re.compile(r"((sat)|(unsat)|(unknown)|(syntax error))")
 
@@ -70,6 +70,17 @@ def get_stltree_args(args):
 
     return stltree_args
 
+def time_command(bash_time):
+    if bash_time:
+        return [
+            'bash -c \'time "$@"\' _'
+        ]
+    else:
+        return [
+            time_bin,
+            '-f',
+            '"Total elapsed time (s): %e\nMax memory used (KB): %M"'
+        ]
 
 def caps_command(timeout, max_mem):
     if timeout > 0 or max_mem > 0:
@@ -85,7 +96,8 @@ def caps_command(timeout, max_mem):
             '-p',
             'MemorySwapMax=0' if max_mem > 0 else 'MemorySwapMax=infinity',
             '-p',
-            'RuntimeMaxSec={:d}'.format(timeout) if timeout > 0 else 'RuntimeMaxSec=infinity'
+            'RuntimeMaxSec={:d}'.format(timeout) if timeout > 0 else 'RuntimeMaxSec=infinity',
+            '--setenv=TIMEFORMAT="Total elapsed time (s): %R"' # Only for bash time
         ]
     else:
         return []
@@ -109,11 +121,7 @@ def exec_bench(fname, args):
 
     command = ' '.join(
         caps_command(args.timeout, args.max_mem)
-        + [
-            time_bin,
-            '-f',
-            '"Total elapsed time (s): %e\nMax memory used (KB): %M"'
-        ]
+        + time_command(args.bash_time)
         + bench_command(fname, args)
     )
 
@@ -150,8 +158,8 @@ def exec_bench(fname, args):
         return (-1, -1, 'No result!')
 
     return (
-        float(time_match.group(1)),
-        int(mem_match.group(1)),
+        float(time_match.group(1).replace(',', '.')),
+        int(mem_match.group(1)) if not args.bash_time else -1,
         result_match[0]
     )
 
@@ -208,6 +216,7 @@ def make_arg_parser():
     argp.add_argument('-v', '--verbose', action='count', default=0, help='Show individual benchmark results')
     argp.add_argument('--csv', type=str, default='', help='Output result in CSV format in the specified file')
     argp.add_argument('-b', '--base-path', type=str, default=None, help='Base path for benchmark files')
+    argp.add_argument('--bash-time', action='store_true', help='Use bash time command for timing')
     argp.add_argument('benchmarks', type=str, help='File containing a list of banchmark files, one per line')
     subparsers = argp.add_subparsers(required=True, dest='tool')
 
