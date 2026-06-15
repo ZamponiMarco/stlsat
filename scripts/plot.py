@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os, os.path, sys, argparse
+import os, os.path, sys, argparse, subprocess, shutil, importlib
 import plotly.graph_objects as go
 import pandas as pd
 import math
@@ -56,7 +56,45 @@ def make_survival_line(tool, data, markers):
         line=dict(shape='linear',width=2,simplify=True)
     ) 
 
-def make_survival_plot(tools, data, output, markers, size, no_y_label, log_scale, no_legend):
+def write_tight_pdf(fig, output_pdf, size):
+    """
+    Writes a tight PDF by exporting SVG first, then converting to PDF.
+    Falls back to Plotly's PDF export if no converter is available.
+    """
+    tmp_svg = output_pdf + ".tmp.svg"
+    fig.write_image(tmp_svg, format='svg', width=size, height=size)
+
+    converted = False
+
+    rsvg_convert = shutil.which("rsvg-convert")
+    if rsvg_convert:
+        result = subprocess.run(
+            [rsvg_convert, "-f", "pdf", "-o", output_pdf, tmp_svg],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            converted = True
+        else:
+            print(f"Warning: rsvg-convert failed, falling back ({result.stderr.strip()})")
+
+    if not converted:
+        try:
+            cairosvg = importlib.import_module("cairosvg")
+            cairosvg.svg2pdf(url=tmp_svg, write_to=output_pdf)
+            converted = True
+        except Exception as exc:
+            print(f"Warning: SVG->PDF conversion unavailable, using Plotly PDF export ({exc})")
+
+    if not converted:
+        fig.write_image(output_pdf, format='pdf', width=size, height=size)
+
+    if os.path.exists(tmp_svg):
+        os.remove(tmp_svg)
+
+
+def make_survival_plot(tools, data, output, timeout, markers, size, no_y_label, log_scale, no_legend):
     # Create the Plotly object for Figure
     fig = go.Figure()
 
@@ -70,11 +108,14 @@ def make_survival_plot(tools, data, output, markers, size, no_y_label, log_scale
         #font_size=12,
         xaxis_title="Time (s)",
         yaxis_title=None if no_y_label else "Number of benchmarks solved",
-        margin=dict(l=0, r=0, t=0, b=0),
+        margin=dict(l=0, r=0, t=0, b=0, pad=0),
         plot_bgcolor='white',      # No background color
         paper_bgcolor='white',     # No outer background
         xaxis=dict(
             type='log' if log_scale else 'linear',
+            range=(-2, math.log10(timeout)+.01) if log_scale else (0, timeout),
+            title_standoff=5,
+            automargin=True,
             showgrid=True,
             gridcolor='lightgrey',  # Grey grid lines
             # showline=True,             # Draw x=0 axis
@@ -83,6 +124,8 @@ def make_survival_plot(tools, data, output, markers, size, no_y_label, log_scale
             # mirror=True
         ),
         yaxis=dict(
+            title_standoff=5,
+            automargin=True,
             showgrid=True,
             gridcolor='lightgrey',  # Grey grid lines
             showline=True,             # Draw x=0 axis
@@ -96,15 +139,18 @@ def make_survival_plot(tools, data, output, markers, size, no_y_label, log_scale
         showlegend=not no_legend,
         legend=dict(
             yanchor="bottom",
-            y=0.08,
+            y=0.05,
             xanchor="right",
             x=0.99,
+            itemwidth=30,
+            tracegroupgap=0,
+            indentation=0,
             bgcolor="rgba(0,0,0,0)",
-            # font=dict(size=8),
+            font=dict(size=10),
         )
     )
 
-    fig.write_image(output+".survival.pdf", format='pdf', width=size, height=size)
+    write_tight_pdf(fig, output+".survival.pdf", size)
 
 
 def plot_identity_line(fig, end):
@@ -168,12 +214,14 @@ def make_scatter_plot(data, output, timeout, size, no_y_label):
         showlegend=False,
         xaxis_title=tool1 + " time (s)",
         yaxis_title=None if no_y_label else tool2 + " time (s)",
-        margin=dict(l=0, r=5, t=5, b=0),
+        margin=dict(l=0, r=0, t=0, b=0, pad=0),
         plot_bgcolor='white',
         paper_bgcolor='white',
         xaxis=dict(
             type='log',
             range=(-2, math.log10(timeout)+.01),
+            title_standoff=5,
+            automargin=True,
             showgrid=True,
             gridcolor='lightgrey',
             layer='below traces',
@@ -185,6 +233,8 @@ def make_scatter_plot(data, output, timeout, size, no_y_label):
         yaxis=dict(
             type='log',
             range=(-2, math.log10(timeout)+.01),
+            title_standoff=5,
+            automargin=True,
             # scaleanchor = "x",
             # scaleratio = 1,
             showgrid=True,
@@ -197,7 +247,7 @@ def make_scatter_plot(data, output, timeout, size, no_y_label):
         ),
     )
 
-    fig.write_image(output+".scatter.pdf", format='pdf', width=size, height=size)
+    write_tight_pdf(fig, output+".scatter.pdf", size)
 
 
 if __name__ == "__main__":
@@ -243,4 +293,4 @@ if __name__ == "__main__":
         else:
             print("Scatter plot is only available for exactly two tools.")
     else:
-        make_survival_plot(tools, data, args.output, args.markers_survival, args.size, args.no_y_label, args.log_survival, args.no_legend)
+        make_survival_plot(tools, data, args.output, args.timeout, args.markers_survival, args.size, args.no_y_label, args.log_survival, args.no_legend)

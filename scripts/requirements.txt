@@ -3,6 +3,7 @@ tabulate
 pandas
 plotly
 kaleido
+cairosvg
 z3-solver==4.15.*
 networkx
 pydot
