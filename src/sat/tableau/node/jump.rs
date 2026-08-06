@@ -170,23 +170,19 @@ impl Node {
 
     pub fn compute_k(&self) -> i32 {
         fn sorted_time_instants(node: &Node) -> BTreeSet<i32> {
-            fn top_level_interval(formula: &NodeFormula, node: &Node) -> Option<Vec<i32>> {
+            fn top_level_interval(formula: &NodeFormula) -> Option<Vec<i32>> {
                 match &formula.kind {
-                    Formula::G { interval, .. } | Formula::R { interval, .. }
-                        if !formula.is_parent_active_in(node) =>
-                    {
-                        Some(vec![interval.lower, interval.upper])
-                    }
-                    Formula::F { interval, .. } | Formula::U { interval, .. } => {
-                        Some(vec![interval.lower, interval.upper])
-                    }
+                    Formula::G { interval, .. }
+                    | Formula::F { interval, .. }
+                    | Formula::U { interval, .. }
+                    | Formula::R { interval, .. } => Some(vec![interval.lower, interval.upper]),
                     _ => None,
                 }
             }
 
             node.operands
                 .iter()
-                .filter_map(|f| top_level_interval(f, node))
+                .filter_map(|f| top_level_interval(f))
                 .flatten()
                 .collect()
         }
