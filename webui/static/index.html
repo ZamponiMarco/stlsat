@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>stlsat — STL Satisfiability Checker</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #1a2233; --muted: #647082;
+    --line: #dde2ea; --accent: #2f5fd0; --accent-ink: #ffffff;
+    --sat: #1a7f4e; --sat-bg: #e4f5ec; --unsat: #b3372f; --unsat-bg: #fdeae8;
+    --unk: #6b7280; --unk-bg: #eef0f3; --warn: #9a6b0a; --warn-bg: #fdf3dd;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 28px 20px 60px; }
+  header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+  h1 { font-size: 24px; margin: 0; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); margin: 0 0 22px; }
+  .health { margin-left: auto; font-size: 13px; color: var(--muted); }
+  .health .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+                 background: #c3c9d4; margin-right: 5px; }
+  .health.ok .dot { background: var(--sat); } .health.bad .dot { background: var(--unsat); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+          padding: 18px; margin-bottom: 16px; }
+  label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px; }
+  textarea { width: 100%; min-height: 110px; resize: vertical; font-family: var(--mono);
+             font-size: 13.5px; padding: 10px 12px; border: 1px solid var(--line);
+             border-radius: 8px; color: var(--ink); background: #fbfcfe; }
+  textarea:focus, select:focus, input:focus { outline: 2px solid #b9ccf5; border-color: var(--accent); }
+  .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; margin-top: 14px; }
+  .field { display: flex; flex-direction: column; }
+  select, input[type=number] { padding: 7px 9px; border: 1px solid var(--line);
+             border-radius: 7px; background: #fff; font-size: 14px; color: var(--ink); }
+  input[type=number] { width: 90px; }
+  .checks { display: flex; gap: 16px; align-items: center; padding-bottom: 7px; }
+  .checks label { display: flex; gap: 6px; align-items: center; margin: 0; font-size: 14px;
+                  color: var(--ink); cursor: pointer; }
+  button { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px;
+           padding: 10px 22px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  button:hover { filter: brightness(1.08); }
+  button:disabled { opacity: 0.55; cursor: wait; }
+  .topline { display: flex; gap: 12px; align-items: flex-end; }
+  .topline .field { flex: 0 0 auto; }
+  .badge { display: inline-block; padding: 4px 14px; border-radius: 999px; font-weight: 700;
+           font-size: 15px; letter-spacing: 0.04em; }
+  .badge.sat { color: var(--sat); background: var(--sat-bg); }
+  .badge.unsat { color: var(--unsat); background: var(--unsat-bg); }
+  .badge.unknown { color: var(--unk); background: var(--unk-bg); }
+  .badge.timeout { color: var(--warn); background: var(--warn-bg); }
+  .badge.error { color: var(--unsat); background: var(--unsat-bg); }
+  .meta { color: var(--muted); font-size: 13px; margin-left: 12px; }
+  .result-head { display: flex; align-items: center; margin-bottom: 10px; }
+  pre { background: #f2f4f8; border: 1px solid var(--line); border-radius: 8px;
+        padding: 10px 12px; font-family: var(--mono); font-size: 12.5px;
+        overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+  table.trace { border-collapse: collapse; width: 100%; font-size: 13px; }
+  table.trace th, table.trace td { border: 1px solid var(--line); padding: 5px 10px;
+        text-align: left; font-family: var(--mono); }
+  table.trace th { background: #f2f4f8; font-family: inherit; }
+  details { margin-top: 10px; } summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  .hidden { display: none; }
+  .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid #ffffff88;
+          border-top-color: #fff; border-radius: 50%; margin-right: 7px;
+          vertical-align: -2px; animation: r 0.7s linear infinite; }
+  @keyframes r { to { transform: rotate(360deg); } }
+  /* --- signal charts (dataviz tokens) --- */
+  .viz-root { --surface-1: #ffffff; --text-primary: #1a2233; --text-secondary: #647082;
+              --grid: #eceff4; --series-1: #2a78d6; --unknown-fill: #eef0f3; }
+  .sigchart { margin: 14px 0 4px; }
+  .sigchart .vartitle { font-size: 13px; color: var(--text-primary); font-weight: 600;
+                        margin: 0 0 2px; }
+  .sigchart svg { display: block; width: 100%; height: auto; }
+  .lane-legend { display: flex; gap: 16px; font-size: 12px; color: var(--text-secondary);
+                 margin: 6px 0 2px; align-items: center; }
+  .lane-legend .chip { display: inline-block; width: 14px; height: 10px; border-radius: 2px;
+                       margin-right: 5px; vertical-align: -1px; border: 1px solid var(--line); }
+  .viztip { position: fixed; pointer-events: none; background: #fff; border: 1px solid var(--line);
+            border-radius: 8px; box-shadow: 0 4px 14px rgba(20,30,50,.12); padding: 8px 11px;
+            font-size: 12.5px; z-index: 50; min-width: 130px; display: none; }
+  .viztip .t { color: var(--text-secondary); margin-bottom: 4px; }
+  .viztip .row { display: flex; align-items: center; gap: 7px; }
+  .viztip .key { display: inline-block; width: 12px; height: 0; border-top: 2px solid var(--series-1);
+                 border-radius: 2px; }
+  .viztip .val { font-weight: 700; color: var(--text-primary); margin-left: auto; }
+  .viztip .name { color: var(--text-secondary); }
+  #graphBox { overflow: auto; max-height: 640px; border: 1px solid var(--line);
+              border-radius: 8px; background: #fff; margin-top: 6px; }
+  #graphBox svg { display: block; }
+  .dl-link { font-size: 13px; color: var(--accent); text-decoration: none; margin-left: 10px; }
+  .dl-link:hover { text-decoration: underline; }
+  .note { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+  .syntax { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
+  .syntax code { font-family: var(--mono); background: #eef0f5; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>stlsat</h1>
+    <p class="sub" style="margin:0">STL satisfiability checker</p>
+    <span id="health" class="health"><span class="dot"></span><span id="healthText">checking…</span></span>
+  </header>
+  <p class="sub"></p>
+
+  <div class="card">
+    <div class="topline">
+      <div class="field" style="flex:1">
+        <label for="example">Load example</label>
+        <select id="example"><option value="">— choose an example —</option></select>
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      <label for="formula">STL formula</label>
+      <textarea id="formula" spellcheck="false"
+        placeholder="(G[0,40] (x1 <= 21)) && (F[0,20] (on1))"></textarea>
+      <div class="syntax">
+        Operators: <code>G[a,b]</code> <code>F[a,b]</code> <code>U[a,b]</code> <code>R[a,b]</code>
+        <code>&&</code> <code>||</code> <code>!</code> <code>-></code> ·
+        atoms: <code>x > 0</code>, <code>x1 <= 21</code>, <code>on1</code>, <code>|x| <= 3</code>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="engine">Engine</label>
+        <select id="engine">
+          <option value="tableau" selected>tableau</option>
+          <option value="fol">fol</option>
+          <option value="smt">smt</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="solver">Solver</label>
+        <select id="solver">
+          <option value="auto" selected>auto</option>
+          <option value="z3">z3</option>
+          <option value="dl">dl</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="timeout">Timeout (s)</label>
+        <input type="number" id="timeout" value="60" min="1" step="1">
+      </div>
+      <div class="field tableau-only">
+        <label for="maxdepth">Max depth</label>
+        <input type="number" id="maxdepth" placeholder="default" min="1" step="1">
+      </div>
+      <div class="checks">
+        <label><input type="checkbox" id="mltl"> MLTL semantics</label>
+        <label class="tableau-only"><input type="checkbox" id="trace"> Trace + signals</label>
+        <label class="tableau-only"><input type="checkbox" id="core"> Unsat core</label>
+        <label class="tableau-only"><input type="checkbox" id="graph"> Tableau graph</label>
+      </div>
+      <div style="margin-left:auto">
+        <button id="checkBtn">Check satisfiability</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="resultCard" class="card hidden">
+    <div class="result-head">
+      <span id="badge" class="badge"></span>
+      <span id="meta" class="meta"></span>
+    </div>
+    <div id="coreBlock" class="hidden">
+      <label>Unsat core</label>
+      <pre id="coreText"></pre>
+    </div>
+    <div id="signalsBlock" class="hidden viz-root">
+      <label>Synthesized signals</label>
+      <div id="signalCharts"></div>
+      <div id="laneLegend" class="lane-legend hidden">
+        <span><span class="chip" style="background:var(--series-1);border-color:var(--series-1)"></span>true</span>
+        <span><span class="chip" style="background:var(--surface-1)"></span>false</span>
+        <span><span class="chip" style="background:var(--unknown-fill)"></span>unconstrained</span>
+      </div>
+      <div id="signalsNote" class="note hidden"></div>
+    </div>
+    <div id="graphBlock" class="hidden">
+      <label>Tableau graph <span id="graphMeta" class="meta"></span>
+        <a id="dotDownload" class="dl-link" download="tableau.dot">download .dot</a></label>
+      <div id="graphBox"></div>
+      <div id="graphNote" class="note hidden"></div>
+    </div>
+    <div id="traceBlock" class="hidden">
+      <label>Satisfying trace (<span id="traceLen"></span> steps)</label>
+      <table class="trace"><thead><tr><th>Step</th><th>State</th></tr></thead>
+        <tbody id="traceBody"></tbody></table>
+    </div>
+    <div id="viztip" class="viztip"></div>
+    <div id="errBlock" class="hidden">
+      <label>Error</label>
+      <pre id="errText"></pre>
+    </div>
+    <details><summary>Raw solver output</summary><pre id="rawOut"></pre></details>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+async function loadInit() {
+  try {
+    const h = await (await fetch('/api/health')).json();
+    const el = $('health');
+    el.classList.add(h.ok ? 'ok' : 'bad');
+    $('healthText').textContent = h.ok ? 'solver ready' : 'stlsat binary not found';
+  } catch { $('healthText').textContent = 'server unreachable'; }
+  try {
+    const ex = await (await fetch('/api/examples')).json();
+    for (const [name, formula] of Object.entries(ex)) {
+      const o = document.createElement('option');
+      o.value = formula; o.textContent = name;
+      $('example').appendChild(o);
+    }
+  } catch {}
+}
+$('example').addEventListener('change', e => {
+  if (e.target.value) $('formula').value = e.target.value;
+});
+$('engine').addEventListener('change', () => {
+  const tab = $('engine').value === 'tableau';
+  document.querySelectorAll('.tableau-only').forEach(el => el.style.opacity = tab ? 1 : 0.45);
+  document.querySelectorAll('.tableau-only input').forEach(el => el.disabled = !tab);
+});
+
+async function run() {
+  const btn = $('checkBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>Solving…';
+  const body = {
+    formula: $('formula').value,
+    engine: $('engine').value,
+    solver: $('solver').value,
+    mltl: $('mltl').checked,
+    trace: $('trace').checked,
+    unsat_core: $('core').checked,
+    graph: $('graph').checked,
+    synthesize: true,
+    timeout: parseFloat($('timeout').value) || 60,
+  };
+  const md = parseInt($('maxdepth').value);
+  if (md > 0) body.max_depth = md;
+
+  let r, data;
+  try {
+    r = await fetch('/api/check', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    });
+    data = await r.json();
+  } catch (e) {
+    data = { status: 'error', error: 'Request failed: ' + e };
+  }
+  render(r && r.status === 422 ? { status: 'error', error: JSON.stringify(data.detail) } : data);
+  btn.disabled = false;
+  btn.textContent = 'Check satisfiability';
+}
+
+function render(d) {
+  $('resultCard').classList.remove('hidden');
+  const badge = $('badge');
+  let cls, text;
+  if (d.status === 'ok') { cls = d.result; text = d.result.toUpperCase(); }
+  else if (d.status === 'timeout') { cls = 'timeout'; text = 'TIMEOUT'; }
+  else { cls = 'error'; text = 'ERROR'; }
+  badge.className = 'badge ' + cls;
+  badge.textContent = text;
+
+  const bits = [];
+  if (d.solver_time_sec != null) bits.push('solver ' + d.solver_time_sec.toFixed(3) + ' s');
+  if (d.wall_time_sec != null) bits.push('wall ' + d.wall_time_sec.toFixed(3) + ' s');
+  if (d.command) bits.push(d.command);
+  $('meta').textContent = bits.join('  ·  ');
+
+  const showCore = d.unsat_core;
+  $('coreBlock').classList.toggle('hidden', !showCore);
+  if (showCore) $('coreText').textContent = d.unsat_core;
+
+  const tr = d.trace && d.trace.length;
+  $('traceBlock').classList.toggle('hidden', !tr);
+  if (tr) {
+    $('traceLen').textContent = d.trace.length;
+    $('traceBody').innerHTML = d.trace.map((s, i) =>
+      `<tr><td>${i}</td><td>${s.map(esc).join(', ') || '∅'}</td></tr>`).join('');
+  }
+
+  $('errBlock').classList.toggle('hidden', !d.error);
+  if (d.error) $('errText').textContent = d.error;
+  $('rawOut').textContent = d.stdout || '(no output)';
+
+  renderSignals(d.signals);
+  renderGraph(d);
+}
+
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* ================= signal charts ================= */
+const CW = 900, ML = 50, MR = 16;
+let sigData = null;      // current signals payload
+let chartRefs = [];      // {crossEl, svg} per chart, for the shared crosshair
+
+function xScale(T) {
+  const span = CW - ML - MR;
+  return t => T <= 1 ? ML + span / 2 : ML + (t / (T - 1)) * span;
+}
+
+function renderSignals(sig) {
+  const block = $('signalsBlock'), box = $('signalCharts');
+  box.replaceChildren();
+  chartRefs = [];
+  sigData = sig || null;
+  const hasNum = sig && Object.keys(sig.numeric).length;
+  const hasBool = sig && Object.keys(sig.boolean).length;
+  if (!hasNum && !hasBool) { block.classList.add('hidden'); return; }
+  block.classList.remove('hidden');
+  const T = sig.time.length;
+  for (const [name, vals] of Object.entries(sig.numeric))
+    box.appendChild(numericChart(name, vals, T));
+  if (hasBool) box.appendChild(booleanLanes(sig.boolean, T));
+  $('laneLegend').classList.toggle('hidden', !hasBool);
+  const note = $('signalsNote');
+  if (sig.unresolved && sig.unresolved.length) {
+    note.classList.remove('hidden');
+    const items = sig.unresolved.slice(0, 6).map(u => `step ${u.step}: ${u.atom}`);
+    note.textContent = 'Not synthesized (see trace table): ' + items.join('  ·  ')
+      + (sig.unresolved.length > 6 ? `  ·  +${sig.unresolved.length - 6} more` : '');
+  } else note.classList.add('hidden');
+}
+
+function svgEl(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v);
+  return el;
+}
+
+function niceTicks(lo, hi, n) {
+  const span = hi - lo || 1, step0 = span / n,
+        mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  const step = [1, 2, 5, 10].map(m => m * mag).find(s => span / s <= n) || 10 * mag;
+  const ticks = [];
+  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step)
+    ticks.push(Math.round(v * 1e6) / 1e6);
+  return ticks;
+}
+
+function numericChart(name, vals, T) {
+  const H = 130, MT = 10, MB = 22, wrap = document.createElement('div');
+  wrap.className = 'sigchart';
+  const title = document.createElement('div');
+  title.className = 'vartitle'; title.textContent = name;
+  wrap.appendChild(title);
+  const svg = svgEl('svg', { viewBox: `0 0 ${CW} ${H}` });
+  const nn = vals.filter(v => v !== null);
+  let lo = Math.min(...nn), hi = Math.max(...nn);
+  if (!isFinite(lo)) { lo = 0; hi = 1; }
+  if (lo === hi) { lo -= 1; hi += 1; }
+  const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
+  const x = xScale(T), y = v => MT + (1 - (v - lo) / (hi - lo)) * (H - MT - MB);
+
+  for (const tv of niceTicks(lo, hi, 4)) {                    // recessive hairlines
+    svg.appendChild(svgEl('line', { x1: ML, x2: CW - MR, y1: y(tv), y2: y(tv),
+      stroke: 'var(--grid)', 'stroke-width': 1 }));
+    const lbl = svgEl('text', { x: ML - 7, y: y(tv) + 3.5, 'text-anchor': 'end',
+      'font-size': 11, fill: 'var(--text-secondary)' });
+    lbl.textContent = tv; svg.appendChild(lbl);
+  }
+  addXAxis(svg, T, x, H - MB + 14);
+
+  let dPath = '', lastIdx = null;                              // step-after line, gaps break it
+  for (let t = 0; t < T; t++) {
+    if (vals[t] === null) { lastIdx = null; continue; }
+    const px = x(t), py = y(vals[t]);
+    if (lastIdx === null) dPath += `M${px},${py}`;
+    else dPath += `H${px}V${py}`;
+    if (t === T - 1 || vals[t + 1] === null) dPath += `H${x(Math.min(t + 1, T - 1))}`;
+    lastIdx = t;
+  }
+  svg.appendChild(svgEl('path', { d: dPath, fill: 'none', stroke: 'var(--series-1)',
+    'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+  for (let t = T - 1; t >= 0; t--) if (vals[t] !== null) {     // end marker + surface ring
+    svg.appendChild(svgEl('circle', { cx: x(t), cy: y(vals[t]), r: 4.5,
+      fill: 'var(--series-1)', stroke: 'var(--surface-1)', 'stroke-width': 2 }));
+    break;
+  }
+  finishChart(wrap, svg, T, H);
+  return wrap;
+}
+
+function booleanLanes(bools, T) {
+  const names = Object.keys(bools), LH = 22, MT = 6, MB = 22;
+  const H = MT + names.length * LH + MB;
+  const wrap = document.createElement('div');
+  wrap.className = 'sigchart';
+  const title = document.createElement('div');
+  title.className = 'vartitle'; title.textContent = 'propositions';
+  wrap.appendChild(title);
+  const svg = svgEl('svg', { viewBox: `0 0 ${CW} ${H}` });
+  const x = xScale(T), halfStep = T > 1 ? (x(1) - x(0)) / 2 : 20;
+
+  names.forEach((name, i) => {
+    const yMid = MT + i * LH + LH / 2;
+    const lbl = svgEl('text', { x: ML - 7, y: yMid + 3.5, 'text-anchor': 'end',
+      'font-size': 11, fill: 'var(--text-secondary)' });
+    lbl.textContent = name.length > 9 ? name.slice(0, 8) + '…' : name;
+    const t2 = svgEl('title', {}); t2.textContent = name; lbl.appendChild(t2);
+    svg.appendChild(lbl);
+    svg.appendChild(svgEl('line', { x1: ML, x2: CW - MR, y1: yMid, y2: yMid,
+      stroke: 'var(--grid)', 'stroke-width': 1 }));
+    // runs of equal state -> one rect per run, 2px surface gap between runs
+    let t = 0;
+    while (t < T) {
+      const state = bools[name][t];
+      let end = t;
+      while (end + 1 < T && bools[name][end + 1] === state) end++;
+      if (state !== false) {
+        const x0 = Math.max(ML, x(t) - halfStep) + 1,
+              x1 = Math.min(CW - MR, x(end) + halfStep) - 1;
+        svg.appendChild(svgEl('rect', { x: x0, y: yMid - 6, width: Math.max(x1 - x0, 2),
+          height: 12, rx: 2,
+          fill: state === true ? 'var(--series-1)' : 'var(--unknown-fill)' }));
+      }
+      t = end + 1;
+    }
+  });
+  addXAxis(svg, T, x, H - MB + 14);
+  finishChart(wrap, svg, T, H);
+  return wrap;
+}
+
+function addXAxis(svg, T, x, yText) {
+  const maxTicks = 12, stride = Math.max(1, Math.ceil(T / maxTicks));
+  for (let t = 0; t < T; t += stride) {
+    const lbl = svgEl('text', { x: x(t), y: yText, 'text-anchor': 'middle',
+      'font-size': 11, fill: 'var(--text-secondary)' });
+    lbl.textContent = t; svg.appendChild(lbl);
+  }
+}
+
+function finishChart(wrap, svg, T, H) {
+  const cross = svgEl('line', { y1: 4, y2: H - 18, stroke: 'var(--text-secondary)',
+    'stroke-width': 1, visibility: 'hidden' });
+  svg.appendChild(cross);
+  const hit = svgEl('rect', { x: ML, y: 0, width: CW - ML - MR, height: H,
+    fill: 'transparent' });
+  svg.appendChild(hit);
+  svg.style.touchAction = 'none';
+  svg.style.aspectRatio = `${CW} / ${H}`;
+  wrap.appendChild(svg);
+  wrap.tabIndex = 0;
+  chartRefs.push({ cross });
+  const toT = clientX => {
+    const r = svg.getBoundingClientRect();
+    const px = (clientX - r.left) / r.width * CW;
+    return Math.max(0, Math.min(T - 1, Math.round((px - ML) / ((CW - ML - MR) / Math.max(T - 1, 1)))));
+  };
+  hit.addEventListener('pointermove', e => showCrosshair(toT(e.clientX), e.clientX, e.clientY));
+  hit.addEventListener('pointerleave', hideCrosshair);
+  wrap.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    const cur = wrap._focusT ?? 0;
+    const nt = Math.max(0, Math.min(T - 1, cur + (e.key === 'ArrowRight' ? 1 : -1)));
+    wrap._focusT = nt;
+    const r = wrap.getBoundingClientRect();
+    showCrosshair(nt, r.left + 80, r.top + 20);
+  });
+  wrap.addEventListener('blur', hideCrosshair);
+}
+
+function showCrosshair(t, cx, cy) {
+  if (!sigData) return;
+  const T = sigData.time.length, x = xScale(T)(t);
+  for (const c of chartRefs) {
+    c.cross.setAttribute('x1', x); c.cross.setAttribute('x2', x);
+    c.cross.setAttribute('visibility', 'visible');
+  }
+  const tip = $('viztip');
+  tip.replaceChildren();
+  const head = document.createElement('div');
+  head.className = 't'; head.textContent = 't = ' + t;
+  tip.appendChild(head);
+  const rows = [];
+  for (const [n, vals] of Object.entries(sigData.numeric))
+    rows.push([n, vals[t] === null ? '—' : String(vals[t])]);
+  for (const [n, vals] of Object.entries(sigData.boolean))
+    rows.push([n, vals[t] === null ? '—' : String(vals[t])]);
+  for (const [n, v] of rows.slice(0, 14)) {
+    const row = document.createElement('div'); row.className = 'row';
+    const key = document.createElement('span'); key.className = 'key';
+    const name = document.createElement('span'); name.className = 'name'; name.textContent = n;
+    const val = document.createElement('span'); val.className = 'val'; val.textContent = v;
+    row.append(key, name, val); tip.appendChild(row);
+  }
+  if (rows.length > 14) {
+    const more = document.createElement('div'); more.className = 't';
+    more.textContent = '+' + (rows.length - 14) + ' more — see trace table';
+    tip.appendChild(more);
+  }
+  tip.style.display = 'block';
+  const tw = tip.offsetWidth, sw = window.innerWidth;
+  tip.style.left = (cx + 18 + tw > sw ? cx - tw - 14 : cx + 18) + 'px';
+  tip.style.top = Math.max(8, cy - 20) + 'px';
+}
+
+function hideCrosshair() {
+  for (const c of chartRefs) c.cross.setAttribute('visibility', 'hidden');
+  $('viztip').style.display = 'none';
+}
+
+/* ================= tableau graph ================= */
+const GRAPH_RENDER_NODE_CAP = 600;
+let dotUrl = null;
+
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+async function renderGraph(d) {
+  const block = $('graphBlock'), box = $('graphBox'), note = $('graphNote');
+  box.replaceChildren(); note.classList.add('hidden');
+  if (!d.dot && !d.dot_truncated) { block.classList.add('hidden'); return; }
+  block.classList.remove('hidden');
+  $('graphMeta').textContent = d.node_count != null ? `· ${d.node_count} nodes` : '';
+  if (dotUrl) URL.revokeObjectURL(dotUrl);
+  const dl = $('dotDownload');
+  if (d.dot) {
+    dotUrl = URL.createObjectURL(new Blob([d.dot], { type: 'text/vnd.graphviz' }));
+    dl.href = dotUrl; dl.style.display = '';
+  } else dl.style.display = 'none';
+
+  if (d.dot_truncated) {
+    note.classList.remove('hidden');
+    note.textContent = 'Graph is too large to transfer — re-run stlsat with --graph-output locally and open it with Graphviz.';
+    return;
+  }
+  if (d.node_count != null && d.node_count > GRAPH_RENDER_NODE_CAP) {
+    note.classList.remove('hidden');
+    note.textContent = `Graph has ${d.node_count} nodes — too large to render inline. Download the .dot and open it with Graphviz (e.g. "dot -Tsvg tableau.dot -o tableau.svg").`;
+    return;
+  }
+  try {
+    if (!window.Viz) {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/viz.js');
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/full.render.js');
+    }
+    const svg = await new Viz().renderSVGElement(d.dot);
+    svg.removeAttribute('width'); svg.removeAttribute('height');
+    svg.style.maxWidth = 'none';
+    box.appendChild(svg);
+  } catch (e) {
+    note.classList.remove('hidden');
+    note.textContent = 'Could not render the graph in the browser (viz.js failed to load — offline?). '
+      + 'Download the .dot and render it with Graphviz: dot -Tsvg tableau.dot -o tableau.svg';
+  }
+}
+
+$('checkBtn').addEventListener('click', run);
+$('formula').addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') run();
+});
+loadInit();
+</script>
+</body>
+</html>
