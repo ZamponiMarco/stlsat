@@ -10,7 +10,7 @@ timeout=120
 jobs=4
 max_mem=30720
 iters=5
-tools=("stlsat" "stlsat_fol" "stlsat_smt" "stlsat_parallel" "stltree")
+tools=("stlsat" "stlsat_no_jump" "stlsat_fol" "stlsat_smt" "stlsat_parallel" "stltree")
 bench_sets=("random" "random0")
 outdir=./output_stl
 
@@ -70,6 +70,12 @@ set -x
 if [[ " ${tools[@]} " =~ " stlsat " ]]; then
     for bench_set in "${bench_sets[@]}"; do
         ./run_bench.py --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_${bench_set}.csv" -b "${benchdir}/${bench_set}/" "${benchdir}/${bench_set}/${bench_set}.list" stlsat --engine tableau &> "${outdir}/stlsat_${bench_set}.log"
+    done
+fi
+
+if [[ " ${tools[@]} " =~ " stlsat_no_jump " ]]; then
+    for bench_set in "${bench_sets[@]}"; do
+        ./run_bench.py --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_no_jump_${bench_set}.csv" -b "${benchdir}/${bench_set}/" "${benchdir}/${bench_set}/${bench_set}.list" stlsat --engine tableau --no-jump-rule &> "${outdir}/stlsat_no_jump_${bench_set}.log"
     done
 fi
 
