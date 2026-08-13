@@ -53,19 +53,6 @@ impl Node {
             }
 
             match &operand.kind {
-                Formula::R {
-                    right: phi,
-                    interval,
-                    ..
-                }
-                | Formula::U {
-                    interval,
-                    left: phi,
-                    ..
-                }
-                | Formula::G { interval, phi } => {
-                    obstacles.extend(phi.proposition_full_interval(interval.clone()));
-                }
                 Formula::Not(phi) => {
                     if let Formula::Prop(e) = &**phi {
                         obstacles.insert(PropositionValidityInterval {
@@ -88,7 +75,13 @@ impl Node {
                         },
                     });
                 }
-                _ => {}
+                _ => {
+                    obstacles.extend(
+                        operand
+                            .kind
+                            .proposition_full_interval(Interval { lower: 0, upper: 0 }),
+                    );
+                }
             }
         }
 
@@ -182,7 +175,7 @@ impl Node {
 
             node.operands
                 .iter()
-                .filter_map(|f| top_level_interval(f))
+                .filter_map(top_level_interval)
                 .flatten()
                 .collect()
         }

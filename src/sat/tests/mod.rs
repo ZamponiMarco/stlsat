@@ -92,6 +92,8 @@ macro_rules! solver_engine_tests {
         #[case::jump_soundness_f("test_jump_soundness_f", "(G[0,1] (F[5,5] a)) U[0,5] (!b) && G[0,4] b && F[8,8] !a", true, false)]
         #[case::jump_soundness_g("test_jump_soundness_g", "((G[1,1] (! true)) U[0,2] (true U[4,4] p)) & ((true R[2,2] true) U[4,4] (!p))", true, false)]
         #[case::jump_soundness_r("test_jump_soundness_r", "(((! true) R[1,1] (! true)) U[0,2] (true U[4,4] p)) & ((true R[2,2] true) U[4,4] (!p))", true, false)]
+        #[case::jump_completeness_f("test_jump_completeness_f", "F[0,2]F[2,2] p & (F[2,2] !p & F[4,4] !p)", true, true)]
+        #[case::jump_completeness_fg("test_jump_completeness_fg", "F[0,2] F[4,4] p & F[2,4]G[0,2] !p & F[2,4]G[2,4] !p", true, true)]
         fn solver_cases(
             #[case] name: &'static str,
             #[case] formula: &'static str,
