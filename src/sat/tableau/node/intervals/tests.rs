@@ -15,6 +15,15 @@ fn interval(lower: i32, upper: i32) -> Interval {
 fn validity(expr: &Expr, interval: Interval) -> PropositionValidityInterval {
     PropositionValidityInterval {
         expr: expr.clone(),
+        negated: false,
+        interval,
+    }
+}
+
+fn negated_validity(expr: &Expr, interval: Interval) -> PropositionValidityInterval {
+    PropositionValidityInterval {
+        expr: expr.clone(),
+        negated: true,
         interval,
     }
 }
@@ -41,7 +50,11 @@ fn interval_not() {
     let a = expr("a");
 
     let formula = Formula::not(Formula::prop(a.clone()));
-    assert_intervals(&formula, interval(0, 0), vec![validity(&a, interval(0, 0))]);
+    assert_intervals(
+        &formula,
+        interval(0, 0),
+        vec![negated_validity(&a, interval(0, 0))],
+    );
 }
 
 #[test]
@@ -56,7 +69,10 @@ fn interval_binary() {
     assert_intervals(
         &formula_and,
         interval(0, 0),
-        vec![validity(&a, interval(0, 0)), validity(&b, interval(0, 0))],
+        vec![
+            validity(&a, interval(0, 0)),
+            negated_validity(&b, interval(0, 0)),
+        ],
     );
 
     let formula_or = Formula::or(vec![
@@ -66,7 +82,10 @@ fn interval_binary() {
     assert_intervals(
         &formula_or,
         interval(0, 0),
-        vec![validity(&a, interval(0, 0)), validity(&b, interval(0, 0))],
+        vec![
+            validity(&a, interval(0, 0)),
+            negated_validity(&b, interval(0, 0)),
+        ],
     );
 }
 
@@ -94,7 +113,7 @@ fn interval_imply() {
         &formula,
         interval(0, 0),
         vec![
-            validity(&not_a, interval(0, 0)),
+            negated_validity(&not_a, interval(0, 0)),
             validity(&b, interval(0, 0)),
         ],
     );

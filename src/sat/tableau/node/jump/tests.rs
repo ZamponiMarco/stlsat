@@ -9,6 +9,10 @@ fn prop(name: &str) -> Formula {
     Formula::prop(Expr::bool(Arc::from(name)))
 }
 
+fn not_prop(name: &str) -> Formula {
+    Formula::not(prop(name))
+}
+
 #[test]
 fn max_jump_one_returns_max() {
     let node = Node::from_operands(vec![]);
@@ -20,7 +24,7 @@ fn max_jump_one_returns_max() {
 fn intersection_completeness_forces_one() {
     let mut node = Node::from_operands(vec![
         NodeFormula::from(Formula::f(Interval { lower: 0, upper: 5 }, prop("a"))).with_marked(true),
-        Formula::g(Interval { lower: 0, upper: 0 }, prop("b")).into(),
+        Formula::g(Interval { lower: 0, upper: 0 }, not_prop("a")).into(),
     ]);
     node.current_time = 0;
     assert_eq!(node.calculate_k_star(), 1);
@@ -30,7 +34,7 @@ fn intersection_completeness_forces_one() {
 fn intersection_soundness_forces_one() {
     let mut node = Node::from_operands(vec![
         NodeFormula::from(Formula::g(Interval { lower: 0, upper: 5 }, prop("a"))).with_marked(true),
-        Formula::g(Interval { lower: 0, upper: 3 }, prop("b")).into(),
+        Formula::g(Interval { lower: 0, upper: 3 }, not_prop("a")).into(),
     ]);
     node.current_time = 0;
     assert_eq!(node.calculate_k_star(), 1);

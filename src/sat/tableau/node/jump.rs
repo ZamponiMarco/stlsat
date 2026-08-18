@@ -5,7 +5,10 @@ use crate::{
     sat::tableau::node::NodeFormula,
 };
 
-use super::{Node, intervals::PropositionValidityInterval};
+use super::{
+    Node,
+    intervals::{ConflictCache, PropositionValidityInterval},
+};
 
 #[cfg(test)]
 mod tests;
@@ -54,21 +57,22 @@ impl Node {
 
             match &operand.kind {
                 Formula::Not(phi) => {
-                    if let Formula::Prop(e) = &**phi {
-                        obstacles.insert(PropositionValidityInterval {
-                            expr: e.clone(),
-                            interval: Interval {
-                                lower: self.current_time,
-                                upper: self.current_time,
-                            },
-                        });
-                    } else {
+                    let Formula::Prop(e) = &**phi else {
                         panic!("Unexpected formula inside Not: {:?}", phi);
                     };
+                    obstacles.insert(PropositionValidityInterval {
+                        expr: e.clone(),
+                        negated: true,
+                        interval: Interval {
+                            lower: self.current_time,
+                            upper: self.current_time,
+                        },
+                    });
                 }
                 Formula::Prop(e) => {
                     obstacles.insert(PropositionValidityInterval {
                         expr: e.clone(),
+                        negated: false,
                         interval: Interval {
                             lower: self.current_time,
                             upper: self.current_time,
@@ -143,22 +147,28 @@ impl Node {
         targets: &HashSet<PropositionValidityInterval>,
         obstacles: &HashSet<PropositionValidityInterval>,
     ) -> i32 {
-        let cross = || {
-            targets.iter().flat_map(|a| {
-                obstacles
-                    .iter()
-                    .filter(move |b| a.expr.id != b.expr.id)
-                    .map(move |b| (a, b))
-            })
-        };
-        if cross().any(|(a, b)| a.interval.intersects(&b.interval)) {
-            return 1;
+        let mut bound = i32::MAX;
+        let mut conflict_cache = ConflictCache::default();
+
+        for target in targets {
+            for obstacle in obstacles {
+                if target.expr.id == obstacle.expr.id {
+                    continue;
+                }
+
+                if target.conflicts_with(obstacle, &mut conflict_cache) {
+                    return 1;
+                }
+
+                match obstacle.interval.lower - target.interval.upper {
+                    1 => return 1,
+                    gap if gap > 1 => bound = bound.min(gap),
+                    _ => {}
+                }
+            }
         }
-        cross()
-            .map(|(a, b)| b.interval.lower - a.interval.upper)
-            .filter(|&k| k >= 1)
-            .min()
-            .unwrap_or(i32::MAX)
+
+        bound
     }
 
     pub fn compute_k(&self) -> i32 {
