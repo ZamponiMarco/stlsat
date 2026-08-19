@@ -21,7 +21,7 @@ logic="$1"
 shift
 if [ "$logic" != "MLTL" ] && [ "$logic" != "STL" ]; then
     echo "Error: first argument must be either MLTL or STL"
-    echo "Usage: $0 {MLTL|STL} [--timeout N] [--bench-sets \"SET1 SET2 ...\"] [--base-dir DIR] [--output-dir DIR] [--adjacent-plots] [--survival-tools TOOL1,TOOL2,...] [--survival-labels LABEL1,LABEL2] [--scatter-tools TOOL1,TOOL2] [--scatter-labels LABEL1,LABEL2]"
+    echo "Usage: $0 {MLTL|STL} [--timeout N] [--bench-sets \"SET1 SET2 ...\"] [--base-dir DIR] [--output-dir DIR] [--adjacent-plots] [--survival-tools TOOL1,TOOL2,...] [--survival-labels LABEL1,LABEL2] [--scatter-tools TOOL1,TOOL2,...]"
     exit 1
 fi
 
@@ -34,7 +34,6 @@ adjacent_plots=false
 survival_tools=()
 survival_labels=()
 scatter_tools=()
-scatter_labels=()
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -69,10 +68,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --scatter-tools)
             IFS=',' read -r -a scatter_tools <<< "$2"
-            shift 2
-            ;;
-        --scatter-labels)
-            IFS=',' read -r -a scatter_labels <<< "$2"
             shift 2
             ;;
         *)
@@ -118,6 +113,21 @@ if [ ${#survival_tools[@]} -lt 2 ]; then
     exit 1
 fi
 
+function get_survival_label() {
+    local requested_tool="$1"
+    local i
+
+    for i in "${!survival_tools[@]}"; do
+        if [ "${survival_tools[$i]}" = "$requested_tool" ]; then
+            echo "${survival_labels[$i]}"
+            return 0
+        fi
+    done
+
+    echo "Error: scatter tool '$requested_tool' has no corresponding survival label" >&2
+    return 1
+}
+
 if [ ! -d "${outdir}" ]; then
     mkdir -p "${outdir}"
 fi
@@ -139,23 +149,53 @@ for dataset in "${datasets[@]}"; do
 done
 
 
+scatter_plot_tools=()
+scatter_plot_labels=()
+
 if [ ${#scatter_tools[@]} -gt 0 ]; then
-    if [ ${#scatter_tools[@]} -ne 2 ]; then
-        echo "Error: --scatter-tools must specify exactly two tool names separated by commas"
+    if (( ${#scatter_tools[@]} % 2 != 0 )); then
+        echo "Error: --scatter-tools must specify an even number of tool names separated by commas"
         exit 1
     fi
-    if [ ${#scatter_labels[@]} -eq 0 ]; then
-        scatter_labels=("${scatter_tools[0]}" "${scatter_tools[1]}")
+
+    for tool in "${scatter_tools[@]}"; do
+        if ! label=$(get_survival_label "$tool"); then
+            echo "Error: scatter tool '$tool' has no corresponding survival label" >&2
+            exit 1
+        fi
+        scatter_plot_tools+=("$tool")
+        scatter_plot_labels+=("$label")
+    done
+else
+    default_scatter_pairs=(
+        "stlsat|stlsat_fol"
+        "stlsat|stlsat_smt"
+    )
+    generated_default_scatter=false
+
+    for pair in "${default_scatter_pairs[@]}"; do
+        IFS='|' read -r -a pair_parts <<< "$pair"
+        tool_a="${pair_parts[0]}"
+        tool_b="${pair_parts[1]}"
+
+        if printf '%s\n' "${survival_tools[@]}" | grep -Fxq "$tool_a" && printf '%s\n' "${survival_tools[@]}" | grep -Fxq "$tool_b"; then
+            scatter_plot_tools+=("$tool_a" "$tool_b")
+            scatter_plot_labels+=("$(get_survival_label "$tool_a")" "$(get_survival_label "$tool_b")")
+            generated_default_scatter=true
+        fi
+    done
+
+    if [ "$generated_default_scatter" = false ]; then
+        scatter_plot_tools+=("${survival_tools[0]}" "${survival_tools[1]}")
+        scatter_plot_labels+=("${survival_labels[0]}" "${survival_labels[1]}")
     fi
-    if [ ${#scatter_labels[@]} -ne 2 ]; then
-        echo "Error: --scatter-labels must specify exactly two labels separated by commas"
-        exit 1
-    fi
-    scatter_tool_arg=$(printf '%s,' "${scatter_tools[@]}")
-    scatter_tool_arg="${scatter_tool_arg%,}"
-    scatter_label_arg=$(printf '%s,' "${scatter_labels[@]}")
-    scatter_label_arg="${scatter_label_arg%,}"
-    scatter_output_prefix="${scatter_tools[0]}_vs_${scatter_tools[1]}"
+fi
+
+for ((pair_index = 0; pair_index < ${#scatter_plot_tools[@]}; pair_index += 2)); do
+    tool_a="${scatter_plot_tools[$pair_index]}"
+    tool_b="${scatter_plot_tools[$((pair_index + 1))]}"
+    label_a="${scatter_plot_labels[$pair_index]}"
+    label_b="${scatter_plot_labels[$((pair_index + 1))]}"
 
     y_label=
     plot_no=0
@@ -164,50 +204,6 @@ if [ ${#scatter_tools[@]} -gt 0 ]; then
             y_label="--no-y-label"
         fi
         ((plot_no++))
-        python3 plot.py "${scatter_label_arg}" "$(make_tools_csvs "${basedir}" "${dataset}" "${scatter_tools[@]}")" ${timeout} --scatter ${y_label} -o "${outdir}/${prefix}_${scatter_output_prefix}_${dataset}"
+        python3 plot.py "${label_a},${label_b}" "$(make_tools_csvs "${basedir}" "${dataset}" "$tool_a" "$tool_b")" ${timeout} --scatter ${y_label} -o "${outdir}/${prefix}_${tool_a}_vs_${tool_b}_${dataset}"
     done
-else
-    default_scatter_pairs=(
-        "stlsat|stlsat_fol|STLSat (tableau)|STLSat (FOL)"
-        "stlsat|stlsat_smt|STLSat (tableau)|STLSat (SMT)"
-    )
-    generated_default_scatter=false
-
-    for pair in "${default_scatter_pairs[@]}"; do
-        IFS='|' read -r -a pair_parts <<< "$pair"
-        tool_a="${pair_parts[0]}"
-        tool_b="${pair_parts[1]}"
-        label_a="${pair_parts[2]}"
-        label_b="${pair_parts[3]}"
-
-        if printf '%s\n' "${survival_tools[@]}" | grep -Fxq "$tool_a" && printf '%s\n' "${survival_tools[@]}" | grep -Fxq "$tool_b"; then
-            y_label=
-            plot_no=0
-            for dataset in "${datasets[@]}"; do
-                if ((plot_no > 0)) && [ "$adjacent_plots" = true ]; then
-                    y_label="--no-y-label"
-                fi
-                ((plot_no++))
-                python3 plot.py "${label_a},${label_b}" "$(make_tools_csvs "${basedir}" "${dataset}" "${tool_a}" "${tool_b}")" ${timeout} --scatter ${y_label} -o "${outdir}/${prefix}_${tool_a}_vs_${tool_b}_${dataset}"
-            done
-            generated_default_scatter=true
-        fi
-    done
-
-    if [ "$generated_default_scatter" = false ]; then
-        fallback_tools=("${survival_tools[0]}" "${survival_tools[1]}")
-        fallback_labels=("${survival_labels[0]}" "${survival_labels[1]}")
-        fallback_label_arg=$(printf '%s,' "${fallback_labels[@]}")
-        fallback_label_arg="${fallback_label_arg%,}"
-
-        y_label=
-        plot_no=0
-        for dataset in "${datasets[@]}"; do
-            if ((plot_no > 0)) && [ "$adjacent_plots" = true ]; then
-                y_label="--no-y-label"
-            fi
-            ((plot_no++))
-            python3 plot.py "${fallback_label_arg}" "$(make_tools_csvs "${basedir}" "${dataset}" "${fallback_tools[@]}")" ${timeout} --scatter ${y_label} -o "${outdir}/${prefix}_${fallback_tools[0]}_vs_${fallback_tools[1]}_${dataset}"
-        done
-    fi
-fi
+done
