@@ -143,7 +143,21 @@ impl Node {
         o_set
     }
 
-    fn compute_jump_bound(
+    fn completeness_jump_bound(
+        targets: &HashSet<PropositionValidityInterval>,
+        obstacles: &HashSet<PropositionValidityInterval>,
+    ) -> bool {
+        let mut conflict_cache = ConflictCache::default();
+
+        targets.iter().any(|target| {
+            obstacles.iter().any(|obstacle| {
+                target.expr.id != obstacle.expr.id
+                    && target.conflicts_with(obstacle, &mut conflict_cache)
+            })
+        })
+    }
+
+    fn soundness_jump_bound(
         targets: &HashSet<PropositionValidityInterval>,
         obstacles: &HashSet<PropositionValidityInterval>,
     ) -> i32 {
@@ -210,18 +224,15 @@ impl Node {
         let completeness_targets = self.compute_target_set();
         let completeness_obstacles = self.compute_obstacle_set();
 
-        let jump_complete =
-            Self::compute_jump_bound(&completeness_targets, &completeness_obstacles);
-
-        if jump_complete <= 1 {
+        if Self::completeness_jump_bound(&completeness_targets, &completeness_obstacles) {
             return 1;
         }
 
         let soundness_targets = self.compute_n();
         let soundness_obstacles = self.compute_o();
 
-        let jump_sound = Self::compute_jump_bound(&soundness_targets, &soundness_obstacles);
+        let jump_sound = Self::soundness_jump_bound(&soundness_targets, &soundness_obstacles);
 
-        max_jump.min(jump_complete).min(jump_sound)
+        max_jump.min(jump_sound)
     }
 }

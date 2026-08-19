@@ -607,7 +607,7 @@ impl DifferenceLogicSolver {
                             ))
                             .is_err()
                     {
-                        log::debug!("DL does not support formula: {:?}", &formula);
+                        log::debug!("DL does not support formula: {:?}", formula);
                         return false;
                     }
                 }
