@@ -89,6 +89,7 @@ def caps_command(timeout, max_mem):
             '--quiet',
             '--user',
             '--scope',
+            '--collect',
             '-p',
             'KillSignal=SIGKILL',
             '-p',
