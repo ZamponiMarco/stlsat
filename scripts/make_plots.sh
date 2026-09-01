@@ -86,7 +86,7 @@ if [ "$logic" = "MLTL" ]; then
         datasets=("nasa-boeing" "random" "random0")
     fi
     default_survival_tools=("stlsat_parallel" "stlsat" "stlsat_no_jump" "stlsat_fol" "stlsat_smt" "stltree" "mltlsat")
-    default_survival_labels=("STLSat parallel" "STLSat tableau" "STLSat basic tableau" "STLSat FOL" "STLSat SMT" "STLTree unsound tableau" "MLTLSAT")
+    default_survival_labels=("STLSat parallel" "STLSat JUMP tableau" "STLSat basic tableau" "STLSat FOL" "STLSat SMT" "STLTree unsound tableau" "MLTLSAT")
     prefix="mltl"
 elif [ "$logic" = "STL" ]; then
     if [ -z "$basedir" ]; then
@@ -96,7 +96,7 @@ elif [ "$logic" = "STL" ]; then
         datasets=("random" "random0")
     fi
     default_survival_tools=("stlsat_parallel" "stlsat" "stlsat_no_jump" "stlsat_fol" "stlsat_smt" "stltree")
-    default_survival_labels=("STLSat parallel" "STLSat tableau" "STLSat basic tableau" "STLSat FOL" "STLSat SMT" "STLTree unsound tableau")
+    default_survival_labels=("STLSat parallel" "STLSat JUMP tableau" "STLSat basic tableau" "STLSat FOL" "STLSat SMT" "STLTree unsound tableau")
     prefix="stl"
 fi
 
