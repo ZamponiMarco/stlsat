@@ -3,21 +3,24 @@
 The experiment scripts compare STLSat with [STLTree](https://github.com/michiari/stltree)
 and [MLTLSAT](https://github.com/michiari/mltlsat). Each benchmark is placed in a
 transient systemd scope so that its timeout and memory limit are enforced by Linux
-cgroups.
+cgroups. The Docker image also includes everything needed to build and check the Lean formalization in
+[STLSat Proof](https://github.com/michiari/stlsat-proof).
 
-These instructions assume that the three repositories are siblings:
+These instructions assume that the four repositories are siblings:
 
 ```text
 Repos/
 ├── stlsat/
+├── stlsat-proof/
 ├── stltree/
 └── mltlsat/
 ```
 
 The bare-metal workflow uses these local checkouts. The Dockerfile copies the current
-STLSat working tree and fetches pinned STLTree and MLTLSAT revisions, making the image
-independent of directories outside the Docker build context. Record the STLSat commit
-and dirty state, as well as the final image ID, alongside published results.
+STLSat working tree and fetches pinned STLTree, MLTLSAT, and STLSat Proof revisions,
+making the image independent of directories outside the Docker build context. Record
+the STLSat commit and dirty state, as well as the final image ID, alongside published
+results.
 
 ## Running on bare metal
 
@@ -72,6 +75,16 @@ Z3_LIBRARY_PATH_OVERRIDE="$Z3_PY_DIR/lib" \
   cargo build --release
 
 make -C ../mltlsat/translator/src release
+```
+
+To check the formal proofs on bare metal, install
+[elan](https://github.com/leanprover/elan), then run Lake from the proof checkout.
+Its `lean-toolchain` and `lake-manifest.json` pin the Lean and dependency versions:
+
+```bash
+cd /path/to/Repos/stlsat-proof
+lake exe cache get
+lake build
 ```
 
 Check that the user systemd manager is reachable:
@@ -136,8 +149,11 @@ The image runs systemd as PID 1. Consequently it must be started with a writable
 cgroup hierarchy. The command below uses a private cgroup namespace and privileged
 mode; only build and run trusted source trees this way.
 
-The Docker image currently targets `linux/amd64`. The Dockerfile fetches the two comparison repositories at revisions pinned by its
-`STLTREE_REF` and `MLTLSAT_REF` build arguments. It uses the official Z3 4.15.8
+The Docker image currently targets `linux/amd64`. The Dockerfile fetches the two
+comparison repositories and proof repository at revisions pinned by its `STLTREE_REF`,
+`MLTLSAT_REF`, and `STLSAT_PROOF_REF` build arguments. It installs the proof
+repository's pinned Lean toolchain and prefetches its locked dependencies and mathlib
+binary cache, but does not check the proofs during `docker build`. It uses the official Z3 4.15.8
 manylinux wheel for the Rust library, Python package, and command-line executable.
 The wheel is protected by its published SHA-256 digest; using it directly avoids the
 Rust crate's rate-limit-prone GitHub API lookup. Build the image from the STLSat root:
@@ -155,6 +171,7 @@ To deliberately use other committed revisions, override the pins:
 docker build \
   --build-arg STLTREE_REF=<commit-or-tag> \
   --build-arg MLTLSAT_REF=<commit-or-tag> \
+  --build-arg STLSAT_PROOF_REF=<commit-or-tag> \
   --tag stlsat-experiments .
 ```
 
@@ -190,6 +207,16 @@ docker exec stlsat-experiments \
 `systemctl is-system-running` may report `degraded` because hardware-related units
 are unavailable in a container. The `systemd-run` smoke test must nevertheless exit
 successfully.
+
+The proof tree, pinned Lean toolchain, and prefetched dependencies are retained in the
+image. Build and check all proofs when desired with:
+
+```bash
+docker exec stlsat-experiments bash -lc '
+  cd /opt/stlsat-proof
+  lake build
+'
+```
 
 Run the experiments with the paths embedded in the image. Output is written through
 the `/results` bind mount:

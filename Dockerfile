@@ -3,6 +3,7 @@
 ARG RUST_VERSION=1.90.0
 ARG STLTREE_REF=cec92165abbe6bf241fc99f73717754a2f0d4a76
 ARG MLTLSAT_REF=ccd6ec667ff01ce4ceea80aa273be1923dc49359
+ARG STLSAT_PROOF_REF=67e0f3c6b712675d5a5947b5338fbff022ae8624
 ARG Z3_WHEEL_URL=https://github.com/Z3Prover/z3/releases/download/z3-4.15.8/z3_solver-4.15.8.0-py3-none-manylinux_2_27_x86_64.whl
 ARG Z3_WHEEL_SHA256=9cd56da5d4946e5f877736386b15d8ec7616c9dac6bced1d5862a22f890ccd13
 
@@ -10,6 +11,7 @@ FROM debian:bookworm-slim AS experiment_sources
 
 ARG STLTREE_REF
 ARG MLTLSAT_REF
+ARG STLSAT_PROOF_REF
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends ca-certificates git \
     && rm -rf /var/lib/apt/lists/* \
@@ -17,7 +19,9 @@ RUN apt-get update \
     && git -C /src/stltree checkout --detach "${STLTREE_REF}" \
     && git clone https://github.com/michiari/mltlsat.git /src/mltlsat \
     && git -C /src/mltlsat checkout --detach "${MLTLSAT_REF}" \
-    && rm -rf /src/stltree/.git /src/mltlsat/.git
+    && git clone https://github.com/michiari/stlsat-proof.git /src/stlsat-proof \
+    && git -C /src/stlsat-proof checkout --detach "${STLSAT_PROOF_REF}" \
+    && rm -rf /src/stltree/.git /src/mltlsat/.git /src/stlsat-proof/.git
 
 
 FROM debian:bookworm-slim AS z3_binary
@@ -61,9 +65,26 @@ COPY --from=experiment_sources /src/mltlsat .
 RUN make -C translator/src release
 
 
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim AS stlsat_proof_dependencies
+
+ENV ELAN_HOME=/root/.elan
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends \
+        ca-certificates curl elan git unzip zstd \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /src/stlsat-proof
+COPY --from=experiment_sources /src/stlsat-proof .
+# The repository pins both Lean and mathlib. Install that exact toolchain and
+# prefetch the locked dependencies and mathlib binary cache without checking
+# the STLSat proofs; users can run `lake build` in the final image.
+RUN elan toolchain install "$(cat lean-toolchain)" \
+    && lake exe cache get
+
+
+FROM stlsat_proof_dependencies
 
 ENV container=docker \
+    ELAN_HOME=/root/.elan \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
     PATH=/opt/z3/bin:/opt/venv/bin:${PATH} \
@@ -74,7 +95,9 @@ RUN apt-get update \
     && apt-get install --yes --no-install-recommends \
         chromium \
         dbus \
+        elan \
         fonts-dejavu-core \
+        git \
         libstdc++6 \
         librsvg2-bin \
         procps \
@@ -108,6 +131,7 @@ COPY --from=stlsat_builder /src/stlsat/target/release/stlsat /opt/stlsat/target/
 COPY --from=experiment_sources /src/stltree /opt/stltree
 COPY --from=experiment_sources /src/mltlsat /opt/mltlsat
 COPY --from=mltlsat_builder /src/mltlsat/translator/src/MLTLConvertor /opt/mltlsat/translator/src/MLTLConvertor
+RUN ln --symbolic /src/stlsat-proof /opt/stlsat-proof
 
 RUN mkdir -p /results \
     && chmod +x \
