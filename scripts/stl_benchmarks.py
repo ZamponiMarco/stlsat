@@ -24,28 +24,29 @@ bench_names = {
 bench_files = {name: os.path.join(base_dir, filename) for name, filename in bench_names.items()}
 
 
-def check_benchmark(bench_name, bench_file, stltree_path, timeout, iters):
+def check_benchmark(bench_name, bench_file, stltree_path, timeout, iters, systemd_manager):
     argp = make_arg_parser()
     results = {'dataset': bench_name}
+    manager_args = ['--systemd-manager', systemd_manager]
 
     # SMT BMC-like encoding
-    args_smt = argp.parse_args(['--iters', str(iters), '--timeout', str(timeout), 'dummy.list', '--bash-time', 'stlsat', '--engine', 'smt'])
+    args_smt = argp.parse_args(['--iters', str(iters), '--timeout', str(timeout)] + manager_args + ['dummy.list', '--bash-time', 'stlsat', '--engine', 'smt'])
     _, results['time_smt'], _, results['result_smt'] = iter_bench(bench_file, args_smt)
 
     # FOL encoding
-    args_fol = argp.parse_args(['--iters', str(iters), '--timeout', str(timeout), 'dummy.list', '--bash-time', 'stlsat', '--engine', 'fol'])
+    args_fol = argp.parse_args(['--iters', str(iters), '--timeout', str(timeout)] + manager_args + ['dummy.list', '--bash-time', 'stlsat', '--engine', 'fol'])
     _, results['time_fol'], _, results['result_fol'] = iter_bench(bench_file, args_fol)
 
     # STLTree tableau-based checking
-    args_python_tableau = argp.parse_args(['--iters', str(iters), '--timeout', str(timeout), 'dummy.list', '--bash-time', 'stltree', stltree_path])
+    args_python_tableau = argp.parse_args(['--iters', str(iters), '--timeout', str(timeout)] + manager_args + ['dummy.list', '--bash-time', 'stltree', stltree_path])
     _, results['time_python_tableau'], _, results['result_python_tableau'] = iter_bench(bench_file, args_python_tableau)
 
     # Rust tableau-based checking
-    args_rust_tableau = argp.parse_args(['--iters', str(iters), '--timeout', str(timeout), 'dummy.list', '--bash-time', 'stlsat', '--engine', 'tableau'])
+    args_rust_tableau = argp.parse_args(['--iters', str(iters), '--timeout', str(timeout)] + manager_args + ['dummy.list', '--bash-time', 'stlsat', '--engine', 'tableau'])
     _, results['time_rust_tableau'], _, results['result_rust_tableau'] = iter_bench(bench_file, args_rust_tableau)
 
     # Rust tableau-based checking without JUMP rule
-    args_rust_tableau_no_jump = argp.parse_args(['--iters', str(iters), '--timeout', str(timeout), 'dummy.list', '--bash-time', 'stlsat', '--engine', 'tableau', '--no-jump-rule'])
+    args_rust_tableau_no_jump = argp.parse_args(['--iters', str(iters), '--timeout', str(timeout)] + manager_args + ['dummy.list', '--bash-time', 'stlsat', '--engine', 'tableau', '--no-jump-rule'])
     _, results['time_rust_tableau_no_jump'], _, results['result_rust_tableau_no_jump'] = iter_bench(bench_file, args_rust_tableau_no_jump)
 
     return results
@@ -85,9 +86,10 @@ if __name__ == '__main__':
     argp.add_argument('--timeout', type=int, default=120, help='Timeout for each benchmark (in seconds)')
     argp.add_argument('--iters', type=int, default=1, help='Number of iterations for each benchmark')
     argp.add_argument('--csv', type=str, default='', help='Path to output CSV file')
+    argp.add_argument('--systemd-manager', choices=('user', 'system'), default='user', help='Run benchmark scopes with the user or system systemd manager (default: user)')
     args = argp.parse_args()
 
-    results = [check_benchmark(name, file, args.stltree_path, args.timeout, args.iters) for name, file in bench_files.items()]
+    results = [check_benchmark(name, file, args.stltree_path, args.timeout, args.iters, args.systemd_manager) for name, file in bench_files.items()]
 
     print("Benchmark results:")
     pretty_print(results, args.timeout, args.csv)

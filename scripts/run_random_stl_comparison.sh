@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 1 ]; then
-    echo "Usage: $0 [--benchdir DIR] [--timeout SECONDS] [--jobs N] [--max-mem MB] [--iters N] [--tools \"TOOL1 TOOL2 ...\"] [--stltree-path PATH] [--bench-sets \"SET1 SET2 ...\"] [--output-dir DIR]"
+    echo "Usage: $0 [--benchdir DIR] [--timeout SECONDS] [--jobs N] [--max-mem MB] [--iters N] [--tools \"TOOL1 TOOL2 ...\"] [--stltree-path PATH] [--bench-sets \"SET1 SET2 ...\"] [--output-dir DIR] [--systemd-manager {user|system}]"
     exit 1
 fi
 
@@ -13,6 +13,7 @@ iters=5
 tools=("stlsat" "stlsat_no_jump" "stlsat_fol" "stlsat_smt" "stlsat_parallel" "stltree")
 bench_sets=("random" "random0")
 outdir=./output_stl
+systemd_manager=user
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -52,6 +53,10 @@ while [[ $# -gt 0 ]]; do
             outdir="$2"
             shift 2
             ;;
+        --systemd-manager)
+            systemd_manager="$2"
+            shift 2
+            ;;
         *)
             echo "Unknown argument: $1"
             exit 1
@@ -69,31 +74,31 @@ set -x
 
 if [[ " ${tools[@]} " =~ " stlsat " ]]; then
     for bench_set in "${bench_sets[@]}"; do
-        ./run_bench.py --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_${bench_set}.csv" -b "${benchdir}/${bench_set}/" "${benchdir}/${bench_set}/${bench_set}.list" stlsat --engine tableau &> "${outdir}/stlsat_${bench_set}.log"
+        ./run_bench.py --systemd-manager "${systemd_manager}" --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_${bench_set}.csv" -b "${benchdir}/${bench_set}/" "${benchdir}/${bench_set}/${bench_set}.list" stlsat --engine tableau &> "${outdir}/stlsat_${bench_set}.log"
     done
 fi
 
 if [[ " ${tools[@]} " =~ " stlsat_no_jump " ]]; then
     for bench_set in "${bench_sets[@]}"; do
-        ./run_bench.py --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_no_jump_${bench_set}.csv" -b "${benchdir}/${bench_set}/" "${benchdir}/${bench_set}/${bench_set}.list" stlsat --engine tableau --no-jump-rule &> "${outdir}/stlsat_no_jump_${bench_set}.log"
+        ./run_bench.py --systemd-manager "${systemd_manager}" --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_no_jump_${bench_set}.csv" -b "${benchdir}/${bench_set}/" "${benchdir}/${bench_set}/${bench_set}.list" stlsat --engine tableau --no-jump-rule &> "${outdir}/stlsat_no_jump_${bench_set}.log"
     done
 fi
 
 if [[ " ${tools[@]} " =~ " stlsat_fol " ]]; then
     for bench_set in "${bench_sets[@]}"; do
-        ./run_bench.py --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_fol_${bench_set}.csv" -b "${benchdir}/${bench_set}/" "${benchdir}/${bench_set}/${bench_set}.list" stlsat --engine fol &> "${outdir}/stlsat_fol_${bench_set}.log"
+        ./run_bench.py --systemd-manager "${systemd_manager}" --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_fol_${bench_set}.csv" -b "${benchdir}/${bench_set}/" "${benchdir}/${bench_set}/${bench_set}.list" stlsat --engine fol &> "${outdir}/stlsat_fol_${bench_set}.log"
     done
 fi
 
 if [[ " ${tools[@]} " =~ " stlsat_smt " ]]; then
     for bench_set in "${bench_sets[@]}"; do
-        ./run_bench.py --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_smt_${bench_set}.csv" -b "${benchdir}/${bench_set}/" "${benchdir}/${bench_set}/${bench_set}.list" stlsat --engine smt &> "${outdir}/stlsat_smt_${bench_set}.log"
+        ./run_bench.py --systemd-manager "${systemd_manager}" --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_smt_${bench_set}.csv" -b "${benchdir}/${bench_set}/" "${benchdir}/${bench_set}/${bench_set}.list" stlsat --engine smt &> "${outdir}/stlsat_smt_${bench_set}.log"
     done
 fi
 
 if [[ " ${tools[@]} " =~ " stlsat_parallel " ]]; then
     for bench_set in "${bench_sets[@]}"; do
-        ./run_bench.py --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_parallel_${bench_set}.csv" -b "${benchdir}/${bench_set}/" "${benchdir}/${bench_set}/${bench_set}.list" stlsat-parallel &> "${outdir}/stlsat_parallel_${bench_set}.log"
+        ./run_bench.py --systemd-manager "${systemd_manager}" --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stlsat_parallel_${bench_set}.csv" -b "${benchdir}/${bench_set}/" "${benchdir}/${bench_set}/${bench_set}.list" stlsat-parallel &> "${outdir}/stlsat_parallel_${bench_set}.log"
     done
 fi
 
@@ -103,6 +108,6 @@ if [[ " ${tools[@]} " =~ " stltree " ]]; then
         exit 1
     fi
     for bench_set in "${bench_sets[@]}"; do
-        ./run_bench.py --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stltree_${bench_set}.csv" -b "${benchdir}/${bench_set}/" "${benchdir}/${bench_set}/${bench_set}.list" stltree "${stltree_path}" &> "${outdir}/stltree_${bench_set}.log"
+        ./run_bench.py --systemd-manager "${systemd_manager}" --timeout ${timeout} --max-mem ${max_mem} --jobs ${jobs} --iters ${iters} -vv --csv "${outdir}/stltree_${bench_set}.csv" -b "${benchdir}/${bench_set}/" "${benchdir}/${bench_set}/${bench_set}.list" stltree "${stltree_path}" &> "${outdir}/stltree_${bench_set}.log"
     done
 fi

@@ -82,12 +82,12 @@ def time_command(bash_time):
             '"Total elapsed time (s): %e\nMax memory used (KB): %M"'
         ]
 
-def caps_command(timeout, max_mem):
+def caps_command(timeout, max_mem, systemd_manager):
     if timeout > 0 or max_mem > 0:
         return [
             'systemd-run',
             '--quiet',
-            '--user',
+            '--{:s}'.format(systemd_manager),
             '--scope',
             '--collect',
             '-p',
@@ -121,7 +121,7 @@ def exec_bench(fname, args):
     print('Evaluating file', fname, '...')
 
     command = ' '.join(
-        caps_command(args.timeout, args.max_mem)
+        caps_command(args.timeout, args.max_mem, args.systemd_manager)
         + time_command(args.bash_time)
         + bench_command(fname, args)
     )
@@ -218,6 +218,12 @@ def make_arg_parser():
     argp.add_argument('--csv', type=str, default='', help='Output result in CSV format in the specified file')
     argp.add_argument('-b', '--base-path', type=str, default=None, help='Base path for benchmark files')
     argp.add_argument('--bash-time', action='store_true', help='Use bash time command for timing')
+    argp.add_argument(
+        '--systemd-manager',
+        choices=('user', 'system'),
+        default='user',
+        help='Run benchmark scopes with the user or system systemd manager (default: user)',
+    )
     argp.add_argument('benchmarks', type=str, help='File containing a list of banchmark files, one per line')
     subparsers = argp.add_subparsers(required=True, dest='tool')
 
