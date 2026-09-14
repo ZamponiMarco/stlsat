@@ -165,7 +165,7 @@ def plot_identity_line(fig, end):
         )
     ))
 
-def make_scatter_plot(data, output, timeout, size, no_y_label):
+def make_scatter_plot(data, output, timeout, size, no_y_label, range_min=-2):
     """
     Creates a scatter plot for the given data.
     """
@@ -179,29 +179,30 @@ def make_scatter_plot(data, output, timeout, size, no_y_label):
     sat_points = joint_data[joint_data["Result"] == "sat"]
     unsat_points = joint_data[joint_data["Result"] == "unsat"]
     unknown_points = joint_data[joint_data["Result"] == "unknown"]
+    lower_bound = 10.0 ** range_min
 
     fig = go.Figure()
     plot_identity_line(fig, timeout)
 
     fig.add_trace(go.Scatter(
-        x=sat_points["Time (s)_1"],
-        y=sat_points["Time (s)_2"],
+        x=sat_points["Time (s)_1"].clip(lower=lower_bound),
+        y=sat_points["Time (s)_2"].clip(lower=lower_bound),
         mode='markers',
         marker=dict(size=5, symbol='x', color='green'),
         cliponaxis=False,
     ))
 
     fig.add_trace(go.Scatter(
-        x=unsat_points["Time (s)_1"],
-        y=unsat_points["Time (s)_2"],
+        x=unsat_points["Time (s)_1"].clip(lower=lower_bound),
+        y=unsat_points["Time (s)_2"].clip(lower=lower_bound),
         mode='markers',
         marker=dict(size=5, symbol='x', color='red'),
         cliponaxis=False,
     ))
 
     fig.add_trace(go.Scatter(
-        x=unknown_points["Time (s)_1"],
-        y=unknown_points["Time (s)_2"],
+        x=unknown_points["Time (s)_1"].clip(lower=lower_bound),
+        y=unknown_points["Time (s)_2"].clip(lower=lower_bound),
         mode='markers',
         marker=dict(size=5, symbol='x', color='gray'),
         cliponaxis=False,
@@ -219,7 +220,7 @@ def make_scatter_plot(data, output, timeout, size, no_y_label):
         paper_bgcolor='white',
         xaxis=dict(
             type='log',
-            range=(-2, math.log10(timeout)+.01),
+            range=(range_min, math.log10(timeout)+.01),
             title_standoff=5,
             automargin=True,
             showgrid=True,
@@ -232,7 +233,7 @@ def make_scatter_plot(data, output, timeout, size, no_y_label):
         ),
         yaxis=dict(
             type='log',
-            range=(-2, math.log10(timeout)+.01),
+            range=(range_min, math.log10(timeout)+.01),
             title_standoff=5,
             automargin=True,
             # scaleanchor = "x",
