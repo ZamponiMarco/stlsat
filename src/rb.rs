@@ -72,6 +72,10 @@ pub struct GeneratorArgs {
     #[arg(long, default_value_t = 0.5)]
     pub p_temporal: f64,
 
+    /// Temporal operators to use (comma-separated: G,F,U,R)
+    #[arg(long, value_delimiter = ',', value_parser = ["G", "F", "U", "R"], default_value = "G,F,U,R")]
+    pub temporal_operators: Vec<String>,
+
     /// Whether to enforce intervals starting at zero
     #[arg(long, default_value_t = false)]
     pub zero_interval_start: bool,
@@ -88,6 +92,7 @@ pub struct RandomGenerator {
     max_interval: i32,
     p_stop_base: f64,
     p_temporal: f64,
+    temporal_operators: Vec<String>,
     zero_interval_start: bool,
 }
 
@@ -121,6 +126,7 @@ impl RandomGenerator {
             max_interval: args.max_interval,
             p_stop_base: args.p_stop_base,
             p_temporal: args.p_temporal,
+            temporal_operators: args.temporal_operators.clone(),
             zero_interval_start: args.zero_interval_start,
         }
     }
@@ -178,22 +184,22 @@ impl RandomGenerator {
         if rng.random::<f64>() < self.p_temporal && horizon < self.max_horizon {
             // Temporal operator
             let interval = self.random_interval(horizon);
-            let top = rng.random_range(1..=4);
+            let top = self.temporal_operators.choose(&mut rng).unwrap().as_str();
             match top {
-                1 => {
+                "G" => {
                     let phi = self.generate_single_formula(depth + 1, horizon + interval.upper);
                     Formula::g(interval, phi)
                 }
-                2 => {
+                "F" => {
                     let phi = self.generate_single_formula(depth + 1, horizon + interval.upper);
                     Formula::f(interval, phi)
                 }
-                3 => {
+                "U" => {
                     let left = self.generate_single_formula(depth + 1, horizon + interval.upper);
                     let right = self.generate_single_formula(depth + 1, horizon + interval.upper);
                     Formula::u(interval, left, right)
                 }
-                4 => {
+                "R" => {
                     let left = self.generate_single_formula(depth + 1, horizon + interval.upper);
                     let right = self.generate_single_formula(depth + 1, horizon + interval.upper);
                     Formula::r(interval, left, right)
@@ -353,5 +359,29 @@ fn random_linear(real_vars: &[VariableName]) -> ExprKind {
         op,
         left: sum,
         right,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn temporal_operators_limit_generated_formulas() {
+        let mut args =
+            GeneratorArgs::try_parse_from(["rb", "-o", "/tmp", "--temporal-operators", "G,F"])
+                .unwrap();
+        assert_eq!(args.temporal_operators, ["G", "F"]);
+        assert!(
+            GeneratorArgs::try_parse_from(["rb", "-o", "/tmp", "--temporal-operators", "G,X",])
+                .is_err()
+        );
+
+        args.p_temporal = 1.0;
+        let generator = RandomGenerator::new(&args);
+        for _ in 0..20 {
+            let formula = generator.generate_formula().to_string();
+            assert!(!formula.contains(" U[") && !formula.contains(" R["));
+        }
     }
 }
