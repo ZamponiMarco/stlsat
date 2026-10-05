@@ -23,7 +23,6 @@ Cargo.lock
 *~
 */__pycache__
 *.pyc
-scripts/output_mltl
-scripts/output_stl
+scripts/results
 scripts/plots
 .venv

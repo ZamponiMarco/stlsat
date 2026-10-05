@@ -1,0 +1,9 @@
+.git
+.venv
+target
+**/__pycache__
+**/*.pyc
+scripts/output_mltl
+scripts/output_stl
+scripts/plots
+scripts/results
