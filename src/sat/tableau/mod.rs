@@ -153,6 +153,10 @@ impl Tableau {
         }
 
         let Some(children) = self.decompose(&root) else {
+            if let Some(mut trace) = self.trace_builder.take() {
+                trace.add_node(&root);
+                self.trace = Some(trace.freeze());
+            }
             return Some(true);
         };
         self.add_graph_children(&root, &children);
@@ -318,6 +322,9 @@ impl Tableau {
         }
 
         let Some(children) = self.decompose(&node) else {
+            if let Some(trace) = &mut self.trace_builder {
+                trace.add_node(&node);
+            }
             return JobOutcome::Final(JobState::Sat);
         };
 
