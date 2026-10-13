@@ -37,8 +37,10 @@ def binary_available() -> bool:
     return os.path.isfile(STLSAT_BIN) and os.access(STLSAT_BIN, os.X_OK)
 
 
-def _error_message(stdout: str, stderr: str, returncode: int) -> str:
+def _error_message(stdout: str, stderr: str, returncode: int, mltl: bool = False) -> str:
     output = stderr.strip() or stdout.strip()
+    if mltl and "Attempted to add real constraint to empty real solver" in output:
+        return "Formulas with real-valued constraints are not supported in MLTL mode. Uncheck MLTL semantics to use them."
     if unparsed_input := _UNPARSED_INPUT_RE.search(output):
         detail = unparsed_input.group(1).strip()
         return f"Invalid formula syntax near: {detail}" if detail else "Invalid formula syntax."
@@ -171,7 +173,7 @@ def check_formula(
         return {
             "status": "error",
             "result": None,
-            "error": _error_message(stdout, stderr, proc.returncode),
+            "error": _error_message(stdout, stderr, proc.returncode, mltl),
             "wall_time_sec": wall,
             "stdout": stdout[-4000:],
             "command": cmd,
