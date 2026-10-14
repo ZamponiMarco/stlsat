@@ -6,6 +6,9 @@ use std::{
 
 use crate::{formula::Formula, sat::tableau::node::Node, util::join_with};
 
+#[cfg(test)]
+mod tests;
+
 pub struct TraceBuilder {
     nodes: VecDeque<(Vec<Formula>, i32)>,
 }
@@ -35,7 +38,16 @@ impl TraceBuilder {
             .iter()
             .map(|f| &f.kind)
             .filter(|f| matches!(f, Formula::Prop(_) | Formula::Not(_)))
-            .filter(|&f| seen.insert(f.clone()))
+            .filter(|&f| {
+                let (negated, inner) = match f {
+                    Formula::Not(inner) => (true, inner.as_ref()),
+                    _ => (false, f),
+                };
+                match inner {
+                    Formula::Prop(expr) => seen.insert((negated, &expr.kind)),
+                    _ => true,
+                }
+            })
             .cloned()
             .collect();
         self.nodes.push_front((formulas, node.current_time));
