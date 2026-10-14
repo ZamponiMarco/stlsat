@@ -46,10 +46,11 @@ class CheckRequest(BaseModel):
 
 EXAMPLES = {
     "Simple (sat)": "G[0,10] (x > 0)",
-    "Conflicting bounds (unsat)": "(G[0,10] (x > 5)) && (F[2,8] (x < 3))",
+    "Pump (unsat)": "(G[0,10] (x > 5)) && (F[2,8] (x < 3))",
     "Until": "(x > 0) U[0,5] (y >= 2)",
     "Thermostat": "(G[0,40] (x1 <= 21)) && (G[0,10] ((x2 > 20) U[0,5] (on1))) && (G[0,20] ((x2 > 20) R[2,12] (x1 < 10))) && G[0,20] ((off1 && off2) -> (G[0,5] (on1 || on2))) && F[0,20] (off1 && off2)",
-    "Water Tank": "(G[0,100] (level <= 90)) && (G[0,100] ((demand) -> (F[0,10] (level >= 95)))) && (G[30,40] (demand))",
+    "Water Tank (original)": "(G[0,100] (level <= 90)) && (G[0,100] ((demand) -> (F[0,10] (level >= 95)))) && (G[30,40] (demand)) && (G[0,100] (level >= 40))",
+    "Water Tank (repaired)": "(G[0,100] (level <= 90)) && (G[0,100] ((demand) -> (F[0,10] (level >= 80)))) && (G[30,40] (demand)) && (G[0,100] (level >= 40))",
     "Battery": "(G[1,20] (F[3,14] (d1 >= 1.4))) && (F[6,30] (((live1) && (live2)) -> (G[7,24] ((live1) && (live2))))) && (G[1,49] ((d1 > 0.5) && (d2 > 0.5))) && (G[11,50] (((g1 >= 0) || (g2 >= 0)) U[2,14] ((dead1) && (dead2))))",
     "Response pattern": "G[0,100] ((request > 0) -> (F[0,10] (grant > 0)))",
 }
