@@ -132,7 +132,7 @@
           <option value="smt">smt</option>
         </select>
       </div>
-      <div class="field">
+      <div class="field tableau-only">
         <label for="solver">Solver</label>
         <select id="solver">
           <option value="auto" selected>auto</option>
@@ -224,7 +224,7 @@ $('example').addEventListener('change', e => {
 $('engine').addEventListener('change', () => {
   const tab = $('engine').value === 'tableau';
   document.querySelectorAll('.tableau-only').forEach(el => el.style.opacity = tab ? 1 : 0.45);
-  document.querySelectorAll('.tableau-only input').forEach(el => el.disabled = !tab);
+  document.querySelectorAll('.tableau-only input, .tableau-only select').forEach(el => el.disabled = !tab);
 });
 
 async function run() {
