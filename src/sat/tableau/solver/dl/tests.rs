@@ -1286,20 +1286,23 @@ mod normalized_constraint {
 fn sub_expr(x: &str, y: &str) -> AExpr {
     AExpr::BinOp {
         op: ArithOp::Sub,
-        left: Box::new(AExpr::Var(x.into())),
-        right: Box::new(AExpr::Var(y.into())),
+        left: Box::new(AExpr::Var(x.into(), num_rational::Ratio::from_integer(1))),
+        right: Box::new(AExpr::Var(y.into(), num_rational::Ratio::from_integer(1))),
     }
 }
 
 fn abs_expr(x: &str) -> AExpr {
-    AExpr::Abs(Box::new(AExpr::Var(x.into())))
+    AExpr::Abs(Box::new(AExpr::Var(
+        x.into(),
+        num_rational::Ratio::from_integer(1),
+    )))
 }
 
 fn abs_sub_expr(x: &str, y: &str) -> AExpr {
     AExpr::Abs(Box::new(AExpr::BinOp {
         op: ArithOp::Sub,
-        left: Box::new(AExpr::Var(x.into())),
-        right: Box::new(AExpr::Var(y.into())),
+        left: Box::new(AExpr::Var(x.into(), num_rational::Ratio::from_integer(1))),
+        right: Box::new(AExpr::Var(y.into(), num_rational::Ratio::from_integer(1))),
     }))
 }
 
@@ -1308,5 +1311,25 @@ fn num_expr(n: i64) -> AExpr {
 }
 
 fn var_expr(x: &str) -> AExpr {
-    AExpr::Var(x.into())
+    AExpr::Var(x.into(), num_rational::Ratio::from_integer(1))
+}
+
+#[test]
+fn affine_coefficients_supported_only_when_one() {
+    for (input, expected) in [
+        ("1*x <= 3", true),
+        ("1*x - 1*y <= 3", true),
+        ("1*x <= 1*y", true),
+        ("2*x <= 3", false),
+        ("0*x <= 3", false),
+        ("x - 2*y <= 3", false),
+        ("2*x - y <= 3", false),
+        ("x <= 2*y", false),
+        ("-1*x <= 3", false),
+    ] {
+        let (remaining, formula) = crate::formula::parser::parse_formula(input).unwrap();
+        assert!(remaining.is_empty());
+        let root = Node::from_operands(vec![formula.into()]);
+        assert_eq!(DifferenceLogicSolver::supports(&root), expected, "{input}");
+    }
 }

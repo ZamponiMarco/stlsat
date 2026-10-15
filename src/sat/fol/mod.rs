@@ -173,7 +173,7 @@ impl FolSolver {
 
     fn encode_aexpr(&mut self, expr: AExpr, time: &Int) -> Real {
         match expr {
-            AExpr::Var(n) => {
+            AExpr::Var(n, coefficient) => {
                 let func = if let Some(v) = self.real_variables.get(&n) {
                     v
                 } else {
@@ -181,7 +181,10 @@ impl FolSolver {
                     self.real_variables.insert(n.clone(), func);
                     self.real_variables.get(&n).unwrap()
                 };
-                func.apply(&[time]).try_into().unwrap()
+                {
+                    let variable: Real = func.apply(&[time]).try_into().unwrap();
+                    variable * Real::from_rational(*coefficient.numer(), *coefficient.denom())
+                }
             }
             AExpr::Num(r) => Real::from_rational(*r.numer(), *r.denom()),
             AExpr::Abs(inner) => {

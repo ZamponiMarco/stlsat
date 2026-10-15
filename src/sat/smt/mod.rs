@@ -180,7 +180,7 @@ impl SmtSolver {
 
     fn encode_aexpr(&mut self, expr: AExpr, time: i32, time_horizon: usize) -> Real {
         match expr {
-            AExpr::Var(n) => {
+            AExpr::Var(n, coefficient) => {
                 let array = if let Some(v) = self.real_variables.get(&n) {
                     v
                 } else {
@@ -193,6 +193,7 @@ impl SmtSolver {
                     self.real_variables.get(&n).unwrap()
                 };
                 array[time as usize].clone()
+                    * Real::from_rational(*coefficient.numer(), *coefficient.denom())
             }
             AExpr::Num(r) => Real::from_rational(*r.numer(), *r.denom()),
             AExpr::Abs(inner) => {

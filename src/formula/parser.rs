@@ -38,6 +38,15 @@ fn parse_rel_op(input: &str) -> IResult<&str, RelOp> {
 fn parse_aexpr(input: &str) -> IResult<&str, AExpr> {
     fn aexpr_term(input: &str) -> IResult<&str, AExpr> {
         alt((
+            // A rational coefficient multiplying a variable.
+            map(
+                (
+                    alt((parse_ratio, parse_decimal)),
+                    delimited(space0, char('*'), space0),
+                    recognize(pair(alpha1, many0(alt((alpha1, digit1, tag("_")))))),
+                ),
+                |(coefficient, _, name): (_, _, &str)| AExpr::Var(name.into(), coefficient),
+            ),
             // Number
             map(
                 alt((
@@ -49,7 +58,7 @@ fn parse_aexpr(input: &str) -> IResult<&str, AExpr> {
             // Variable
             map(
                 recognize(pair(alpha1, many0(alt((alpha1, digit1, tag("_")))))),
-                |s: &str| AExpr::Var(s.into()),
+                |s: &str| AExpr::Var(s.into(), num_rational::Ratio::from_integer(1)),
             ),
             // Absolute value: |expr|
             map(delimited(char('|'), parse_aexpr, char('|')), |expr| {
@@ -131,17 +140,31 @@ fn parse_ratio(input: &str) -> IResult<&str, Ratio<i64>> {
 }
 
 fn parse_decimal(input: &str) -> IResult<&str, Ratio<i64>> {
-    map(
-        pair(
-            parse_number,
-            opt(pair(char('.'), map_res(digit1, |s: &str| i64::from_str(s)))),
-        ),
-        |(int_part, frac_part)| match frac_part {
-            Some((_, frac_val)) => {
-                let scale = 10i64.pow(frac_val.to_string().len() as u32);
-                Ratio::new(int_part * scale + frac_val, scale)
+    map_res(
+        recognize((opt(char('-')), digit1, opt((char('.'), digit1)))),
+        |literal: &str| -> Result<Ratio<i64>, &'static str> {
+            if let Some((integer, fraction)) = literal.split_once('.') {
+                let scale = 10i64
+                    .checked_pow(fraction.len().try_into().map_err(|_| "decimal too long")?)
+                    .ok_or("decimal too long")?;
+                let integer = integer.parse::<i64>().map_err(|_| "invalid integer")?;
+                let fraction = fraction.parse::<i64>().map_err(|_| "invalid fraction")?;
+                let signed_fraction = if literal.starts_with('-') {
+                    -fraction
+                } else {
+                    fraction
+                };
+                let numerator = integer
+                    .checked_mul(scale)
+                    .and_then(|n| n.checked_add(signed_fraction))
+                    .ok_or("decimal overflow")?;
+                Ok(Ratio::new(numerator, scale))
+            } else {
+                literal
+                    .parse::<i64>()
+                    .map(Ratio::from_integer)
+                    .map_err(|_| "invalid integer")
             }
-            None => Ratio::from_integer(int_part),
         },
     )
     .parse(input)

@@ -115,7 +115,10 @@ impl DifferenceConstraint {
                 },
                 AExpr::Num(c),
             ) => match (&**x, &**y) {
-                (AExpr::Var(x_name), AExpr::Var(y_name)) => {
+                (AExpr::Var(x_name, coefficient), AExpr::Var(y_name, other_coefficient))
+                    if *coefficient == Ratio::from_integer(1)
+                        && *other_coefficient == Ratio::from_integer(1) =>
+                {
                     assert_ne!(
                         **x_name, *X_ZERO_NAME,
                         "Variable name collision with reserved zero variable"
@@ -129,7 +132,9 @@ impl DifferenceConstraint {
                 _ => Err(DifferenceConstraintError::InvalidSubExpression),
             },
             // x ? c
-            (AExpr::Var(x_name), AExpr::Num(c)) => {
+            (AExpr::Var(x_name, coefficient), AExpr::Num(c))
+                if *coefficient == Ratio::from_integer(1) =>
+            {
                 assert_ne!(
                     **x_name, *X_ZERO_NAME,
                     "Variable name collision with reserved zero variable"
@@ -137,7 +142,10 @@ impl DifferenceConstraint {
                 Self::sub_op_num(op, x_name, &VariableName::from(X_ZERO_NAME), *c, id)
             }
             // x ? y
-            (AExpr::Var(x_name), AExpr::Var(y_name)) => {
+            (AExpr::Var(x_name, coefficient), AExpr::Var(y_name, other_coefficient))
+                if *coefficient == Ratio::from_integer(1)
+                    && *other_coefficient == Ratio::from_integer(1) =>
+            {
                 assert_ne!(
                     **x_name, *X_ZERO_NAME,
                     "Variable name collision with reserved zero variable"
