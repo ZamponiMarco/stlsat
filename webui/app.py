@@ -28,7 +28,7 @@ STATIC_DIR = Path(__file__).parent / "static"
 app = FastAPI(
     title="stlsat web interface",
     description="Satisfiability checking for Signal Temporal Logic (STL) formulas.",
-    version="0.1.0",
+    version="1.0.0",
 )
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
