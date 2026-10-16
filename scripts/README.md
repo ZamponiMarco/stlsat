@@ -46,7 +46,7 @@ sudo apt-get install \
 The Chromium package name differs between distributions. On Debian it is `chromium`.
 
 Create the Python environment first. The installed `z3-solver` wheel supplies the
-pre-built Z3 4.15.8 shared library and headers used by Python and the Rust build:
+pre-built Z3 5.3.1 shared library and headers used by Python and the Rust build:
 
 ```bash
 cd /path/to/Repos/stlsat
@@ -54,12 +54,12 @@ python3 -m venv .venv
 source .venv/bin/activate
 
 # The pinned STLTree revision asks for 4.15.3.0; replace only that entry so
-# every experiment uses the requested official Z3 4.15.8 Python wheel.
-sed 's/^z3-solver==.*$/z3-solver==4.15.8.0/' \
-  ../stltree/requirements.txt > /tmp/stltree-requirements-z3-4.15.8.txt
+# every experiment uses the requested official Z3 5.3.1 Python wheel.
+sed 's/^z3-solver==.*$/z3-solver==5.3.1.0/' \
+  ../stltree/requirements.txt > /tmp/stltree-requirements-z3-5.3.1.txt
 pip install \
   -r scripts/requirements.txt \
-  -r /tmp/stltree-requirements-z3-4.15.8.txt
+  -r /tmp/stltree-requirements-z3-5.3.1.txt
 z3 --version
 ```
 
