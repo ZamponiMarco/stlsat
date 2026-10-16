@@ -25,12 +25,28 @@ _DURATION_RE = re.compile(r"DURATION_SEC:\s*([0-9.eE+-]+)")
 _UNSAT_CORE_RE = re.compile(r"Unsat core:\s*(.+)")
 _TRACE_LEN_RE = re.compile(r"Trace length:\s*(\d+)")
 _NODE_COUNT_RE = re.compile(r"Node count:\s*(\d+)")
+_UNPARSED_INPUT_RE = re.compile(
+    r"Unparsed input remaining after parsing formula:\s*([^\r\n]*)"
+)
+_PARSE_ERROR_RE = re.compile(r"Failed to parse formula, parse error:")
 
 MAX_DOT_BYTES = 4 * 1024 * 1024  # don't ship absurdly large graphs to the browser
 
 
 def binary_available() -> bool:
     return os.path.isfile(STLSAT_BIN) and os.access(STLSAT_BIN, os.X_OK)
+
+
+def _error_message(stdout: str, stderr: str, returncode: int, mltl: bool = False) -> str:
+    output = stderr.strip() or stdout.strip()
+    if mltl and "Attempted to add real constraint to empty real solver" in output:
+        return "Formulas with real-valued constraints are not supported in MLTL mode. Uncheck MLTL semantics to use them."
+    if unparsed_input := _UNPARSED_INPUT_RE.search(output):
+        detail = unparsed_input.group(1).strip()
+        return f"Invalid formula syntax near: {detail}" if detail else "Invalid formula syntax."
+    if _PARSE_ERROR_RE.search(output):
+        return "Invalid formula syntax."
+    return (output or f"exit code {returncode}")[-4000:]
 
 
 def _parse_trace(stdout: str) -> list[list[str]] | None:
@@ -157,7 +173,7 @@ def check_formula(
         return {
             "status": "error",
             "result": None,
-            "error": (stderr.strip() or stdout.strip() or f"exit code {proc.returncode}")[-4000:],
+            "error": _error_message(stdout, stderr, proc.returncode, mltl),
             "wall_time_sec": wall,
             "stdout": stdout[-4000:],
             "command": cmd,

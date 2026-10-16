@@ -1,5 +1,9 @@
 .git
+.cargo
+.vscode
 .venv
+**/.venv
+*.tar.xz
 target
 **/__pycache__
 **/*.pyc

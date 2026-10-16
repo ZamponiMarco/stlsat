@@ -18,15 +18,120 @@ This installs three binaries: `stlsat` (main checker), `scanner` (scanner tool),
 
 ### stlsat
 
-The main STL satisfiability checker. Takes a filename as an argument containing the STL formula to check for satisfiability.
+The main STL satisfiability checker. It reads an STL formula from the first line of
+the input file and reports whether it is satisfiable.
 
 ```bash
-stlsat <filename>
+stlsat [OPTIONS] <FORMULA_FILE>
 ```
 
-For example: `stlsat resources/formulas.stl`
+For example:
 
-Run `stlsat --help` for available options.
+```bash
+stlsat --engine tableau --trace-extraction example.stl
+```
+
+The general options are:
+
+| Option | Description |
+| --- | --- |
+| `--engine <tableau\|fol\|smt>` | Select the solving engine. `tableau` (the default) uses STLSat's tableau procedure; `fol` translates the formula to a first-order encoding; `smt` uses a bounded SMT encoding. The latter two encodings are solved with Z3. |
+| `--mltl` | Interpret the input using finite-trace MLTL semantics. The default is STL semantics. |
+| `--smtlib-result` | Print only `sat`, `unsat`, or `unknown`, instead of the engine-specific result and running time. |
+| `--solver <auto\|z3\|dl>` | Choose the arithmetic solver used by the tableau engine. `auto` (the default) uses the built-in difference-logic solver when the constraints are supported and Z3 otherwise. `dl` forces the difference-logic solver; unsupported constraints then cause an error. |
+| `-h`, `--help` | Print the command-line help. |
+
+The remaining options apply only to the `tableau` engine:
+
+| Option | Description |
+| --- | --- |
+| `--unsat-core-extraction` | Extract and print an unsatisfiable core when the result is unsatisfiable. |
+| `--trace-extraction` | Extract and print a satisfying trace when one is found. |
+| `--graph-output <FILE>` | Write the constructed tableau as a Graphviz DOT file. |
+| `--max-depth <N>` | Limit tableau construction depth. The default is `1000000`; reaching the limit can produce an unknown result. |
+| `--no-memoization` | Disable memoization of previously visited tableau states. |
+| `--no-simple-first` | Disable the heuristic that processes simple formulas first. |
+| `--no-formula-optimizations` | Disable syntactic optimizations used during tableau construction. |
+| `--no-jump-rule` | Disable the tableau jump rule. |
+| `--no-formula-simplifications` | Disable formula simplification before tableau construction. |
+
+Run `stlsat --help` to see the options and their current defaults.
+
+#### STL input syntax
+
+An input file must contain one complete formula on its first line. Additional
+lines are ignored. In particular, do not put a blank or comment line before the
+formula.
+
+The accepted syntax can be summarized as follows:
+
+```text
+formula     ::= implication
+implication ::= disjunction (("->" | "<->") implication)?
+disjunction ::= conjunction (("||" | "|") conjunction)*
+conjunction ::= temporal (("&&" | "&") temporal)*
+temporal    ::= unary (("U" | "R") interval unary)*
+unary       ::= "!" unary
+              | "X" unary
+              | ("G" | "F") interval unary
+              | "(" formula ")"
+              | atom
+atom        ::= "true" | "false" | identifier
+              | arithmetic relation arithmetic
+relation    ::= "<" | "<=" | ">" | ">=" | "==" | "!="
+arithmetic  ::= term (("+" | "-") term)*
+term        ::= number | identifier | "|" arithmetic "|"
+              | "(" arithmetic ")"
+interval    ::= "[" unsigned-integer "," unsigned-integer "]"
+```
+
+The formula operators are:
+
+| Syntax | Meaning |
+| --- | --- |
+| `! p` | Negation |
+| `p && q`, `p & q` | Conjunction |
+| `p || q`, `p \| q` | Disjunction |
+| `p -> q` | Implication |
+| `p <-> q` | Equivalence |
+| `X p` | Next (`F[1,1] p`) |
+| `G[a,b] p` | Globally between offsets `a` and `b`, inclusive |
+| `F[a,b] p` | Finally between offsets `a` and `b`, inclusive |
+| `p U[a,b] q` | Until over the closed interval `[a,b]` |
+| `p R[a,b] q` | Release over the closed interval `[a,b]` |
+
+`G`, `F`, `X`, `U`, and `R` are uppercase and interval bounds are non-negative
+integers. The interval must immediately follow its temporal operator: write
+`G[0,5] p`, not `G [0,5] p`. Use bounds with `a <= b`.
+
+Identifiers start with a letter and may then contain letters, digits, and
+underscores, for example `request`, `x2`, or `sensor_ready`. Boolean constants
+`true` and `false` are case-insensitive. Numeric literals may be integers,
+non-negative decimals such as `0.75`, or exact fractions such as `3/4`.
+Integers and fraction components may have a leading minus sign; write a negative
+decimal as subtraction, for example `0 - 0.75`. Arithmetic expressions support
+`+`, `-`, parentheses, and absolute value (`|x - y|`); multiplication and general
+division are not part of the input language.
+
+From highest to lowest, formula precedence is unary operators, `U`/`R`,
+conjunction, disjunction, then implication/equivalence. `U`, `R`, conjunction,
+and disjunction associate to the left; implication and equivalence associate to
+the right. Parentheses are recommended whenever the intended grouping is not
+obvious.
+
+Some example inputs:
+
+```text
+G[0,20] (temperature <= 100)
+```
+
+```text
+(request -> F[1,5] grant) && G[0,20] !(error)
+```
+
+```text
+G[0,10] (|x - target| <= 3/4) && (ready U[2,8] done)
+```
 
 ### scanner
 
