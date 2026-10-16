@@ -165,21 +165,21 @@ mod real_variables_tests {
         let f = Formula::And(vec![
             Formula::Prop(Expr::real(
                 RelOp::Ge,
-                AExpr::Var(Arc::from("x")),
+                AExpr::Var(Arc::from("x"), num_rational::Ratio::from_integer(1)),
                 AExpr::Num(Ratio::from_integer(1)),
             )),
             Formula::u(
                 Interval { lower: 0, upper: 5 },
                 Formula::Prop(Expr::real(
                     RelOp::Lt,
-                    AExpr::Var(Arc::from("y")),
+                    AExpr::Var(Arc::from("y"), num_rational::Ratio::from_integer(1)),
                     AExpr::Num(Ratio::from_integer(2)),
                 )),
                 Formula::g(
                     Interval { lower: 1, upper: 3 },
                     Formula::Prop(Expr::real(
                         RelOp::Eq,
-                        AExpr::Var(Arc::from("z")),
+                        AExpr::Var(Arc::from("z"), num_rational::Ratio::from_integer(1)),
                         AExpr::Num(Ratio::from_integer(3)),
                     )),
                 ),
@@ -193,21 +193,21 @@ mod real_variables_tests {
         let f = Formula::And(vec![
             Formula::Prop(Expr::real(
                 RelOp::Ge,
-                AExpr::Var(Arc::from("x")),
+                AExpr::Var(Arc::from("x"), num_rational::Ratio::from_integer(1)),
                 AExpr::Num(Ratio::from_integer(1)),
             )),
             Formula::u(
                 Interval { lower: 0, upper: 5 },
                 Formula::Prop(Expr::real(
                     RelOp::Lt,
-                    AExpr::Var(Arc::from("y")),
+                    AExpr::Var(Arc::from("y"), num_rational::Ratio::from_integer(1)),
                     AExpr::Num(Ratio::from_integer(2)),
                 )),
                 Formula::g(
                     Interval { lower: 1, upper: 3 },
                     Formula::Prop(Expr::real(
                         RelOp::Eq,
-                        AExpr::Var(Arc::from("x")),
+                        AExpr::Var(Arc::from("x"), num_rational::Ratio::from_integer(1)),
                         AExpr::Num(Ratio::from_integer(3)),
                     )),
                 ),
@@ -242,21 +242,21 @@ mod real_constraints_tests {
         let f = Formula::And(vec![
             Formula::Prop(Expr::real(
                 RelOp::Ge,
-                AExpr::Var(Arc::from("x")),
+                AExpr::Var(Arc::from("x"), num_rational::Ratio::from_integer(1)),
                 AExpr::Num(Ratio::from_integer(1)),
             )),
             Formula::u(
                 Interval { lower: 0, upper: 5 },
                 Formula::Prop(Expr::real(
                     RelOp::Lt,
-                    AExpr::Var(Arc::from("y")),
+                    AExpr::Var(Arc::from("y"), num_rational::Ratio::from_integer(1)),
                     AExpr::Num(Ratio::from_integer(2)),
                 )),
                 Formula::g(
                     Interval { lower: 1, upper: 3 },
                     Formula::Prop(Expr::real(
                         RelOp::Eq,
-                        AExpr::Var(Arc::from("z")),
+                        AExpr::Var(Arc::from("z"), num_rational::Ratio::from_integer(1)),
                         AExpr::Num(Ratio::from_integer(3)),
                     )),
                 ),

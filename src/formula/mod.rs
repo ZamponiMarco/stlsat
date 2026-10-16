@@ -36,7 +36,7 @@ pub enum RelOp {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum AExpr {
-    Var(VariableName),
+    Var(VariableName, Ratio<i64>),
     Num(Ratio<i64>),
     Abs(Box<AExpr>),
     BinOp {
@@ -500,7 +500,13 @@ impl Formula {
 impl Display for AExpr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            AExpr::Var(s) => write!(f, "{s}"),
+            AExpr::Var(s, coefficient) => {
+                if *coefficient == Ratio::from_integer(1) {
+                    write!(f, "{s}")
+                } else {
+                    write!(f, "{coefficient}*{s}")
+                }
+            }
             AExpr::Num(n) => write!(f, "{n}"),
             AExpr::Abs(inner) => write!(f, "|{inner}|"),
             AExpr::BinOp { op, left, right } => {

@@ -41,7 +41,7 @@ impl ConflictCache {
 
             fn collect(expr: &AExpr, variables: &mut HashSet<VariableName>) {
                 match expr {
-                    AExpr::Var(name) => {
+                    AExpr::Var(name, _) => {
                         variables.insert(name.clone());
                     }
                     AExpr::Num(_) => {}

@@ -132,15 +132,16 @@ impl Z3RealSolver {
 
     fn aexpr_to_z3(&mut self, expr: &AExpr) -> Real {
         match expr {
-            AExpr::Var(name) => {
+            AExpr::Var(name, coefficient) => {
                 let name_str = name.to_string();
-                if let Some(v) = self.z3_variables.get(&name_str) {
+                let variable = if let Some(v) = self.z3_variables.get(&name_str) {
                     v.clone()
                 } else {
                     let v = Real::new_const(name_str.as_str());
                     self.z3_variables.insert(name_str, v.clone());
                     v
-                }
+                };
+                variable * Real::from_rational(*coefficient.numer(), *coefficient.denom())
             }
             AExpr::Num(r) => Real::from_rational(*r.numer(), *r.denom()),
             AExpr::Abs(inner) => {

@@ -238,12 +238,12 @@ fn test_unsat_core_real() {
 
     let one = Formula::prop(Expr::real(
         crate::formula::RelOp::Ge,
-        crate::formula::AExpr::Var(Arc::from("x")),
+        crate::formula::AExpr::Var(Arc::from("x"), num_rational::Ratio::from_integer(1)),
         crate::formula::AExpr::Num(Ratio::from_integer(5)),
     ));
     let two = Formula::prop(Expr::real(
         crate::formula::RelOp::Le,
-        crate::formula::AExpr::Var(Arc::from("x")),
+        crate::formula::AExpr::Var(Arc::from("x"), num_rational::Ratio::from_integer(1)),
         crate::formula::AExpr::Num(Ratio::from_integer(0)),
     ));
 
@@ -270,12 +270,12 @@ fn test_unsat_core_real_sat() {
 
     let one = Formula::prop(Expr::real(
         crate::formula::RelOp::Ge,
-        crate::formula::AExpr::Var(Arc::from("x")),
+        crate::formula::AExpr::Var(Arc::from("x"), num_rational::Ratio::from_integer(1)),
         crate::formula::AExpr::Num(Ratio::from_integer(0)),
     ));
     let two = Formula::prop(Expr::real(
         crate::formula::RelOp::Le,
-        crate::formula::AExpr::Var(Arc::from("x")),
+        crate::formula::AExpr::Var(Arc::from("x"), num_rational::Ratio::from_integer(1)),
         crate::formula::AExpr::Num(Ratio::from_integer(5)),
     ));
 
@@ -291,17 +291,17 @@ fn test_unsat_core_real_one_excluded() {
 
     let one = Formula::prop(Expr::real(
         crate::formula::RelOp::Ge,
-        crate::formula::AExpr::Var(Arc::from("x")),
+        crate::formula::AExpr::Var(Arc::from("x"), num_rational::Ratio::from_integer(1)),
         crate::formula::AExpr::Num(Ratio::from_integer(5)),
     ));
     let two = Formula::prop(Expr::real(
         crate::formula::RelOp::Le,
-        crate::formula::AExpr::Var(Arc::from("x")),
+        crate::formula::AExpr::Var(Arc::from("x"), num_rational::Ratio::from_integer(1)),
         crate::formula::AExpr::Num(Ratio::from_integer(0)),
     ));
     let three = Formula::prop(Expr::real(
         crate::formula::RelOp::Ge,
-        crate::formula::AExpr::Var(Arc::from("y")),
+        crate::formula::AExpr::Var(Arc::from("y"), num_rational::Ratio::from_integer(1)),
         crate::formula::AExpr::Num(Ratio::from_integer(1)),
     ));
 
@@ -333,7 +333,7 @@ fn test_unsat_core_false() {
     let two = Formula::prop(Expr::false_expr());
     let three = Formula::prop(Expr::real(
         crate::formula::RelOp::Ge,
-        crate::formula::AExpr::Var(Arc::from("x")),
+        crate::formula::AExpr::Var(Arc::from("x"), num_rational::Ratio::from_integer(1)),
         crate::formula::AExpr::Num(Ratio::from_integer(5)),
     ));
 
@@ -363,7 +363,7 @@ fn test_unsat_core_not_true() {
     let two = Formula::not(Formula::prop(Expr::true_expr()));
     let three = Formula::prop(Expr::real(
         crate::formula::RelOp::Ge,
-        crate::formula::AExpr::Var(Arc::from("x")),
+        crate::formula::AExpr::Var(Arc::from("x"), num_rational::Ratio::from_integer(1)),
         crate::formula::AExpr::Num(Ratio::from_integer(5)),
     ));
 

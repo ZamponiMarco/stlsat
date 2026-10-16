@@ -181,7 +181,7 @@ impl Formula {
             real_vars: &mut HashSet<VariableName>,
         ) {
             match aexpr {
-                AExpr::Var(var_name) => {
+                AExpr::Var(var_name, _) => {
                     real_vars.insert(var_name.clone());
                 }
                 AExpr::BinOp { left, right, .. } => {

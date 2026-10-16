@@ -153,6 +153,23 @@ rb [options]
 
 Run `rb --help` for available options.
 
+## Affine arithmetic
+
+Arithmetic predicates support rational coefficients on variables, using explicit
+`coefficient*variable` syntax, for example:
+
+```text
+G[0,5] (2*x - 3/4*y + 5 <= 6 && -0.5*z >= 1)
+```
+
+Plain variables have coefficient `1`. Integer, fractional, decimal, negative,
+and zero coefficients are supported by all three engines through Z3.
+Multiplication is restricted to a numeric coefficient followed by a variable.
+
+The tableau difference-logic backend accepts only coefficient `1` within its
+existing supported constraint forms. Automatic selection falls back to Z3 for
+other coefficients; explicitly selecting difference logic rejects them.
+
 ## Development
 
 For development, clone the repository and use the [justfile](./justfile) for common tasks:

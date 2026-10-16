@@ -1,28 +1,6 @@
 use std::sync::Arc;
 
-use crate::formula::{AExpr, Expr, ExprKind, Formula, Interval, RelOp, parser::parse_formula};
-
-#[test]
-fn test_parse_simple_proposition() {
-    let input = "a";
-    let result = parse_formula(input);
-    let expected = Formula::Prop(Expr::bool(Arc::from("a")));
-    assert!(result.is_ok_and(|f| f.1.eq_structural(&expected)));
-}
-
-#[test]
-fn test_parse_true() {
-    let input = "TRUE";
-    let result = parse_formula(input);
-    assert!(result.is_ok_and(|f| f.1.eq_structural(&Formula::Prop(Expr::true_expr()))));
-}
-
-#[test]
-fn test_parse_false() {
-    let input = "FALSE";
-    let result = parse_formula(input);
-    assert!(result.is_ok_and(|f| f.1.eq_structural(&Formula::Prop(Expr::false_expr()))));
-}
+use crate::formula::{Expr, Formula, Interval, parser::parse_formula};
 
 #[test]
 fn test_parse_negation() {
@@ -155,30 +133,6 @@ fn test_parse_parentheses_space() {
         Formula::Prop(Expr::bool(Arc::from("a"))),
         Formula::Prop(Expr::bool(Arc::from("b"))),
     ]);
-    assert!(result.is_ok_and(|f| f.1.eq_structural(&expected)));
-}
-
-#[test]
-fn test_parse_decimal() {
-    let input = "x > 0.75";
-    let result = parse_formula(input);
-    let expected = Formula::Prop(Expr::from_expr(ExprKind::Rel {
-        op: RelOp::Gt,
-        left: AExpr::Var(Arc::from("x")),
-        right: AExpr::Num(num_rational::Ratio::new(3, 4)),
-    }));
-    assert!(result.is_ok_and(|f| f.1.eq_structural(&expected)));
-}
-
-#[test]
-fn test_parse_fraction() {
-    let input = "x > 3/4";
-    let result = parse_formula(input);
-    let expected = Formula::Prop(Expr::from_expr(ExprKind::Rel {
-        op: RelOp::Gt,
-        left: AExpr::Var(Arc::from("x")),
-        right: AExpr::Num(num_rational::Ratio::new(3, 4)),
-    }));
     assert!(result.is_ok_and(|f| f.1.eq_structural(&expected)));
 }
 

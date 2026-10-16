@@ -293,7 +293,10 @@ pub fn random_rel_op() -> RelOp {
 fn random_simple(real_vars: &[VariableName]) -> ExprKind {
     let mut rng = rand::rng();
     let op = random_rel_op();
-    let left = AExpr::Var(real_vars.choose(&mut rng).unwrap().clone());
+    let left = AExpr::Var(
+        real_vars.choose(&mut rng).unwrap().clone(),
+        num_rational::Ratio::from_integer(1),
+    );
     let right = AExpr::Num(Ratio::new(
         rng.random_range(-10..10),
         rng.random_range(1..10),
@@ -311,8 +314,8 @@ fn random_diff_logic(real_vars: &[VariableName]) -> ExprKind {
 
     let mut vars = real_vars.to_owned();
     vars.shuffle(&mut rng);
-    let v1 = AExpr::Var(vars[0].clone());
-    let v2 = AExpr::Var(vars[1].clone());
+    let v1 = AExpr::Var(vars[0].clone(), num_rational::Ratio::from_integer(1));
+    let v2 = AExpr::Var(vars[1].clone(), num_rational::Ratio::from_integer(1));
 
     let diff = AExpr::BinOp {
         op: ArithOp::Sub,
@@ -336,12 +339,12 @@ fn random_linear(real_vars: &[VariableName]) -> ExprKind {
     let mut vars = real_vars.to_owned();
     vars.shuffle(&mut rng);
 
-    let mut sum = AExpr::Var(vars[0].clone());
+    let mut sum = AExpr::Var(vars[0].clone(), num_rational::Ratio::from_integer(1));
     for v in vars.into_iter().skip(1).take(n_terms - 1) {
         sum = AExpr::BinOp {
             op: ArithOp::Add,
             left: Box::new(sum),
-            right: Box::new(AExpr::Var(v)),
+            right: Box::new(AExpr::Var(v, num_rational::Ratio::from_integer(1))),
         };
     }
 
