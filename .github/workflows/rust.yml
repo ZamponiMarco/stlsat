@@ -24,12 +24,12 @@ jobs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-cargo-vendored-${{ hashFiles('**/Cargo.lock') }}
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --verbose --features z3/vendored
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --verbose --features z3/vendored
     - name: Check formatting
       run: cargo fmt --check
     - name: Run linter
-      run: cargo clippy -- -D warnings
+      run: cargo clippy --features z3/vendored -- -D warnings
