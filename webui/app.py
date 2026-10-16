@@ -16,6 +16,7 @@ from typing import Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 import signals as signals_mod
@@ -29,6 +30,7 @@ app = FastAPI(
     description="Satisfiability checking for Signal Temporal Logic (STL) formulas.",
     version="0.1.0",
 )
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 class CheckRequest(BaseModel):

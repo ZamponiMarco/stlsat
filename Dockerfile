@@ -41,6 +41,17 @@ RUN apt-get update \
     && chmod +x /opt/z3/bin/z3 \
     && mv /tmp/z3.whl /z3_solver-4.15.8.0-py3-none-manylinux_2_27_x86_64.whl
 
+FROM debian:bookworm-slim AS webui_assets
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /assets \
+    && curl --fail --location --retry 3 https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/viz.js --output /assets/viz.js \
+    && curl --fail --location --retry 3 https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/full.render.js --output /assets/full.render.js \
+    && echo 'f111f22be005ceaf625f06c5a36ba7aa27703dbc0753914559edd1c24715b6e5  /assets/viz.js' | sha256sum --check - \
+    && echo '3a0aace75d0b1677a4afda3b38b7697a569a02636cb3d7a04114f2cc2a95d8d4  /assets/full.render.js' | sha256sum --check -
+
 FROM rust:${RUST_VERSION}-bookworm AS stlsat_builder
 
 RUN apt-get update \
@@ -91,6 +102,8 @@ ENV container=docker \
     LD_LIBRARY_PATH=/opt/z3/lib \
     BROWSER_PATH=/usr/bin/chromium
 
+ENV STLSAT_BIN=/opt/stlsat/target/release/stlsat
+
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends \
         chromium \
@@ -111,6 +124,7 @@ RUN apt-get update \
     && truncate --size 0 /etc/machine-id
 
 COPY scripts/requirements.txt /tmp/stlsat-requirements.txt
+COPY webui/requirements.txt /tmp/webui-requirements.txt
 COPY --from=experiment_sources /src/stltree/requirements.txt /tmp/stltree-requirements.txt
 COPY --from=z3_binary /z3_solver-4.15.8.0-py3-none-manylinux_2_27_x86_64.whl /tmp/
 # The pinned STLTree revision locks z3-solver 4.15.3.0. Replace that one
@@ -119,14 +133,17 @@ RUN sed --in-place 's/^z3-solver==.*$/z3-solver==4.15.8.0/' /tmp/stltree-require
     && python3 -m venv /opt/venv \
     && pip install --no-cache-dir \
         --requirement /tmp/stlsat-requirements.txt \
+        --requirement /tmp/webui-requirements.txt \
         --requirement /tmp/stltree-requirements.txt \
         /tmp/z3_solver-4.15.8.0-py3-none-manylinux_2_27_x86_64.whl \
     && rm /tmp/stlsat-requirements.txt \
+        /tmp/webui-requirements.txt \
         /tmp/stltree-requirements.txt \
         /tmp/z3_solver-4.15.8.0-py3-none-manylinux_2_27_x86_64.whl
 
 COPY --from=z3_binary /opt/z3 /opt/z3
 COPY . /opt/stlsat
+COPY --from=webui_assets /assets /opt/stlsat/webui/static/vendor/viz.js/2.1.2
 COPY --from=stlsat_builder /src/stlsat/target/release/stlsat /opt/stlsat/target/release/stlsat
 COPY --from=experiment_sources /src/stltree /opt/stltree
 COPY --from=experiment_sources /src/mltlsat /opt/mltlsat
@@ -141,6 +158,9 @@ RUN mkdir -p /results \
         /opt/mltlsat/translator/src/MLTLConvertor
 
 WORKDIR /opt/stlsat/scripts
+
+# Start the optional web interface by overriding CMD; see webui/README.md.
+EXPOSE 8000
 
 STOPSIGNAL SIGRTMIN+3
 CMD ["/sbin/init"]

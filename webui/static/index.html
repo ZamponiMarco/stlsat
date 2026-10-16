@@ -514,13 +514,34 @@ function hideCrosshair() {
 /* ================= tableau graph ================= */
 const GRAPH_RENDER_NODE_CAP = 600;
 let dotUrl = null;
+let vizReady = null;
 
 function loadScript(src) {
   return new Promise((res, rej) => {
     const s = document.createElement('script');
-    s.src = src; s.onload = res; s.onerror = rej;
+    s.src = src;
+    s.onload = () => { clearTimeout(timer); res(); };
+    s.onerror = () => {
+      clearTimeout(timer); s.remove(); rej(new Error(`Could not load ${src}`));
+    };
+    const timer = setTimeout(() => s.onerror(), 3000);
     document.head.appendChild(s);
   });
+}
+
+function loadViz() {
+  if (!vizReady) {
+    vizReady = (async () => {
+      for (const file of ['viz.js', 'full.render.js']) {
+        try {
+          await loadScript(`https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/${file}`);
+        } catch (e) {
+          await loadScript(`/static/vendor/viz.js/2.1.2/${file}`);
+        }
+      }
+    })().catch(e => { vizReady = null; throw e; });
+  }
+  return vizReady;
 }
 
 async function renderGraph(d) {
@@ -547,17 +568,14 @@ async function renderGraph(d) {
     return;
   }
   try {
-    if (!window.Viz) {
-      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/viz.js');
-      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/full.render.js');
-    }
+    await loadViz();
     const svg = await new Viz().renderSVGElement(d.dot);
     svg.removeAttribute('width'); svg.removeAttribute('height');
     svg.style.maxWidth = 'none';
     box.appendChild(svg);
   } catch (e) {
     note.classList.remove('hidden');
-    note.textContent = 'Could not render the graph in the browser (viz.js failed to load — offline?). '
+    note.textContent = 'Could not render the graph in the browser (Viz.js could not load or render the graph). '
       + 'Download the .dot and render it with Graphviz: dot -Tsvg tableau.dot -o tableau.svg';
   }
 }
