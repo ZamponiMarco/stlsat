@@ -1,0 +1,90 @@
+name: Release binaries
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_BUILD_JOBS: '2'
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            exe: ''
+          - os: macos-15
+            target: aarch64-apple-darwin
+            exe: ''
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+            exe: ''
+          - os: windows-2022
+            target: x86_64-pc-windows-msvc
+            exe: .exe
+    defaults:
+      run:
+        shell: bash
+    env:
+      TARGET: ${{ matrix.target }}
+      EXE: ${{ matrix.exe }}
+      BUNDLE: stlsat-${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          persist-credentials: false
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup target add "$TARGET" --toolchain stable
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: release-vendored-${{ matrix.target }}-${{ hashFiles('Cargo.lock') }}
+      - name: Build
+        run: cargo +stable build --release --bins --target "$TARGET" --features z3/vendored
+      - name: Smoke test
+        run: |
+          for binary in stlsat scanner rb; do
+            "target/$TARGET/release/$binary$EXE" --help
+          done
+          result=$("target/$TARGET/release/stlsat$EXE" resources/benchmarks/thermostat.stl --smtlib-result --solver z3)
+          test "${result//$'\r'/}" = sat
+      - name: Package
+        id: package
+        run: |
+          mkdir "$BUNDLE"
+          for binary in stlsat scanner rb; do
+            cp "target/$TARGET/release/$binary$EXE" "$BUNDLE/"
+          done
+          cp README.md LICENSE "$BUNDLE/"
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            archive="$BUNDLE.zip"
+            pwsh -NoProfile -Command 'Compress-Archive -Path $env:BUNDLE -DestinationPath ($env:BUNDLE + ".zip")'
+          else
+            archive="$BUNDLE.tar.gz"
+            tar -czf "$archive" "$BUNDLE"
+          fi
+          echo "asset=$archive" >> "$GITHUB_OUTPUT"
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          ASSET: ${{ steps.package.outputs.asset }}
+        run: gh release upload "$RELEASE_TAG" "$ASSET" --repo "$GITHUB_REPOSITORY" --clobber
